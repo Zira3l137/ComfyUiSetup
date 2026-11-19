@@ -171,49 +171,66 @@ def build_qwen(a, refs):
     return g
 
 
+def seedvr2_nodes(g, image, scale, seed, model, color, p="s_"):
+    """SeedVR2 upscale of `image` (an [id, slot] ref) into graph g; returns the output ref.
+    Mirrors the official SeedVR2 template (tiled VAE, colour matched to the original)."""
+    g.update({
+        p + "resize": {"class_type": "ResizeImageMaskNode", "inputs": {
+            "input": image, "resize_type": "scale by multiplier",
+            "resize_type.multiplier": scale, "scale_method": "lanczos"}},
+        p + "pre": {"class_type": "SeedVR2Preprocess", "inputs": {"resized_images": [p + "resize", 0]}},
+        p + "unet": {"class_type": "UNETLoader", "inputs": {"unet_name": SEEDVR2[model], "weight_dtype": "default"}},
+        p + "vae": {"class_type": "VAELoader", "inputs": {"vae_name": SEEDVR2["vae"]}},
+        p + "enc": {"class_type": "VAEEncodeTiled", "inputs": {
+            "pixels": [p + "pre", 0], "vae": [p + "vae", 0], "tile_size": 512, "overlap": 128,
+            "temporal_size": 4096, "temporal_overlap": 8}},
+        p + "cond": {"class_type": "SeedVR2Conditioning", "inputs": {"model": [p + "unet", 0], "vae_conditioning": [p + "enc", 0]}},
+        p + "sample": {"class_type": "KSampler", "inputs": {
+            "model": [p + "unet", 0], "seed": seed, "steps": 1, "cfg": 1.0, "sampler_name": "euler",
+            "scheduler": "simple", "positive": [p + "cond", 0], "negative": [p + "cond", 1],
+            "latent_image": [p + "enc", 0], "denoise": 1.0}},
+        p + "dec": {"class_type": "VAEDecodeTiled", "inputs": {
+            "samples": [p + "sample", 0], "vae": [p + "vae", 0], "tile_size": 512, "overlap": 128,
+            "temporal_size": 4096, "temporal_overlap": 8}},
+        p + "post": {"class_type": "SeedVR2PostProcessing", "inputs": {
+            "images": [p + "dec", 0], "original_resized_images": [p + "resize", 0],
+            "color_correction_method": color}},
+    })
+    return [p + "post", 0]
+
+
 def build_seedvr2(a, refs):
     """Faithful upscale with SeedVR2: one diffusion step that restores detail at the new size.
-    Mirrors the official SeedVR2 template (tiled VAE, alpha kept, colour matched to the original)."""
+    Alpha is kept (joined before, so it is resized along with the image)."""
     if len(refs) != 1:
         sys.exit("seedvr2 needs exactly one --ref image")
-    return {
+    g = {
         "img": {"class_type": "LoadImage", "inputs": {"image": refs[0]}},
         "rgba": {"class_type": "JoinImageWithAlpha", "inputs": {"image": ["img", 0], "alpha": ["img", 1]}},
-        "resize": {"class_type": "ResizeImageMaskNode", "inputs": {
-            "input": ["rgba", 0], "resize_type": "scale by multiplier",
-            "resize_type.multiplier": a.scale, "scale_method": "lanczos"}},
-        "pre": {"class_type": "SeedVR2Preprocess", "inputs": {"resized_images": ["resize", 0]}},
-        "unet": {"class_type": "UNETLoader", "inputs": {"unet_name": SEEDVR2[a.seedvr2_model], "weight_dtype": "default"}},
-        "vae": {"class_type": "VAELoader", "inputs": {"vae_name": SEEDVR2["vae"]}},
-        "enc": {"class_type": "VAEEncodeTiled", "inputs": {
-            "pixels": ["pre", 0], "vae": ["vae", 0], "tile_size": 512, "overlap": 128,
-            "temporal_size": 4096, "temporal_overlap": 8}},
-        "cond": {"class_type": "SeedVR2Conditioning", "inputs": {"model": ["unet", 0], "vae_conditioning": ["enc", 0]}},
-        "sample": {"class_type": "KSampler", "inputs": {
-            "model": ["unet", 0], "seed": a.seed, "steps": 1, "cfg": 1.0, "sampler_name": "euler",
-            "scheduler": "simple", "positive": ["cond", 0], "negative": ["cond", 1],
-            "latent_image": ["enc", 0], "denoise": 1.0}},
-        "dec": {"class_type": "VAEDecodeTiled", "inputs": {
-            "samples": ["sample", 0], "vae": ["vae", 0], "tile_size": 512, "overlap": 128,
-            "temporal_size": 4096, "temporal_overlap": 8}},
-        "post": {"class_type": "SeedVR2PostProcessing", "inputs": {
-            "images": ["dec", 0], "original_resized_images": ["resize", 0],
-            "color_correction_method": a.color}},
-        "save": {"class_type": "SaveImage", "inputs": {"images": ["post", 0], "filename_prefix": "upscale/seedvr2"}},
     }
+    out = seedvr2_nodes(g, ["rgba", 0], a.scale, a.seed, a.seedvr2_model, a.color, p="")
+    g["save"] = {"class_type": "SaveImage", "inputs": {"images": out, "filename_prefix": "upscale/seedvr2"}}
+    return g
 
 
 def build_klein_upscale(a, refs):
-    """Creative upscale ("hires fix") with FLUX 3 Klein: enlarge, then repaint at partial
-    denoise while the original is also fed in as a reference, so identity and layout hold.
-    The first --ref is the image to upscale (<ref_image_0>); any further --ref images are
-    extra references (<ref_image_1>, ...) that keep a face or object from drifting."""
+    """Creative upscale ("hi-res fix") with FLUX 3 Klein: enlarge (SeedVR2 by default, or a
+    plain lanczos stretch), then repaint at partial denoise. By default the original is also
+    a reference (<ref_image_0>), which holds identity and layout; --no-original-ref drops it
+    for more new detail. The first --ref is the image to upscale; further --ref images are
+    extra references, numbered after the original (or from <ref_image_0> without it)."""
     if not refs:
         sys.exit("klein-up needs the image to upscale as the first --ref")
-    prompt = a.prompt or DEFAULT_UPSCALE_PROMPT
-    if not a.prompt and len(refs) > 1:
-        tags = ", ".join(f"<ref_image_{i}>" for i in range(1, len(refs)))
-        prompt += f" The subject looks exactly like {tags}: same face, features, colors and materials."
+    use_orig = not a.no_original_ref
+    extra = refs[1:]
+    first = 1 if use_orig else 0
+    if a.prompt:
+        prompt = a.prompt
+    else:
+        prompt = (UPSCALE_OPENING_REF if use_orig else UPSCALE_OPENING) + " " + UPSCALE_DETAIL
+        if extra:
+            tags = ", ".join(f"<ref_image_{first + i}>" for i in range(len(extra)))
+            prompt += f" Same facial features and details as {tags}."
     g = {
         "unet": {"class_type": "UNETLoader", "inputs": {"unet_name": KLEIN["unet"], "weight_dtype": "default"}},
         "te": {"class_type": "CLIPLoader", "inputs": {"clip_name": KLEIN["te"], "type": "flux3", "device": "default"}},
@@ -225,15 +242,20 @@ def build_klein_upscale(a, refs):
         g["big"] = {"class_type": "ImageScaleToTotalPixels", "inputs": {
             "image": ["ref0", 0], "upscale_method": "lanczos", "megapixels": a.megapixels, "resolution_steps": 16}}
     else:
-        # original x factor, then rounded down to a multiple of 16 px (Klein's latent grid)
-        g["scaled"] = {"class_type": "ImageScaleBy", "inputs": {
-            "image": ["ref0", 0], "upscale_method": "lanczos", "scale_by": a.scale}}
+        if a.first_pass == "seedvr2":   # restores real detail first, so Klein refines a sharp image
+            enlarged = seedvr2_nodes(g, ["ref0", 0], a.scale, a.seed, a.seedvr2_model, a.color)
+        else:
+            g["scaled"] = {"class_type": "ImageScaleBy", "inputs": {
+                "image": ["ref0", 0], "upscale_method": "lanczos", "scale_by": a.scale}}
+            enlarged = ["scaled", 0]
+        # rounded down to a multiple of 16 px (Klein's latent grid)
         g["big"] = {"class_type": "ResizeImageMaskNode", "inputs": {
-            "input": ["scaled", 0], "resize_type": "scale to multiple", "resize_type.multiple": 16,
+            "input": enlarged, "resize_type": "scale to multiple", "resize_type.multiple": 16,
             "scale_method": "lanczos"}}
+    ref_ids = (["ref0"] if use_orig else []) + [f"ref{i}" for i in range(1, len(refs))]
     rml = {"positive": ["pos", 0], "negative": ["neg", 0], "vae": ["vae", 0],
            "resolution": "resize", "resolution.megapixels": a.ref_mp}
-    rml.update({f"images.image{i}": [f"ref{i}", 0] for i in range(len(refs))})
+    rml.update({f"images.image{i}": [r, 0] for i, r in enumerate(ref_ids)})
     g.update({
         "init": {"class_type": "VAEEncode", "inputs": {"pixels": ["big", 0], "vae": ["vae", 0]}},
         "pos": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["te", 0], "text": prompt}},
@@ -249,9 +271,11 @@ def build_klein_upscale(a, refs):
     return g
 
 
-DEFAULT_UPSCALE_PROMPT = (
-    "A high-resolution version of <ref_image_0>: identical composition, subjects, colors and lighting, "
-    "with sharp focus and fine, natural detail in every texture.")
+# Same wording as the workflow: the opening depends on whether the original is a reference.
+UPSCALE_OPENING_REF = ("A high-resolution version of <ref_image_0>: identical composition, subjects, colors "
+                       "and lighting, with")
+UPSCALE_OPENING = "A high-resolution version of this image: same composition, subjects, colors and lighting, with"
+UPSCALE_DETAIL = "sharp focus and fine, natural detail in every texture."
 
 SAM3_CKPT = "sam3.1_multiplex_fp16.safetensors"
 
@@ -468,11 +492,15 @@ def main(argv=None):
     p.add_argument("--seedvr2-model", choices=["3b", "7b"], default="3b",
                    help="seedvr2: model size (7b needs the installer's --seedvr2-7b)")
     p.add_argument("--color", choices=["lab", "wavelet", "adain", "none"], default="lab",
-                   help="seedvr2: colour matching to the original (lab = most faithful)")
+                   help="seedvr2 (also klein-up's SeedVR2 first pass): colour matching (lab = most faithful)")
     p.add_argument("--megapixels", type=float, default=None,
-                   help="klein-up: output size in megapixels instead of --scale")
+                   help="klein-up: output size in megapixels instead of --scale (plain lanczos first pass)")
+    p.add_argument("--first-pass", choices=["seedvr2", "lanczos"], default="seedvr2",
+                   help="klein-up: enlarge with SeedVR2 first (sharp, default) or a plain lanczos stretch (soft)")
+    p.add_argument("--no-original-ref", action="store_true",
+                   help="klein-up: don't feed the original as <ref_image_0> (more new detail, may drift)")
     p.add_argument("--denoise", type=float, default=None,
-                   help="klein-up / detail: how much is repainted (klein-up default 0.35, detail default 0.4)")
+                   help="klein-up / detail: how much is repainted (default 0.4)")
     d = p.add_argument_group("detail (ADetailer-style region repaint with Klein; --ref = identity references)")
     d.add_argument("--image", default=None, help="detail: the image to fix")
     d.add_argument("--detect", default="face:4",
@@ -494,7 +522,7 @@ def main(argv=None):
     if not a.prompt and a.model in ("klein", "qwen"):
         p.error("a prompt is required for klein and qwen")
     if a.denoise is None:
-        a.denoise = 0.4 if a.model == "detail" else 0.35
+        a.denoise = 0.4
     if a.model == "detail":
         if not a.image:
             p.error("detail needs --image")
