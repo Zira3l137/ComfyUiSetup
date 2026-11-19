@@ -31,7 +31,8 @@ def main [
     let py = ($root | path join ".venv" "Scripts" "python.exe")
     let script = ($root | path join "tools" "comfy_gen.py")
 
-    mut args = ["--comfy-root" ($root | path join "ComfyUI")]
+    # list<any>: the numbers go to the external as they are (a list<string> would reject them).
+    mut args: list<any> = ["--comfy-root" ($root | path join "ComfyUI")]
     if $creative {
         # The prompt goes right after the mode name, where the generator expects it.
         $args = ($args | append ["klein-up"])

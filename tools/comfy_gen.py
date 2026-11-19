@@ -1,11 +1,13 @@
 """Command-line image generation through a running ComfyUI (called by gen.nu).
 
-Builds an API-format prompt for FLUX 3 Image Klein or Qwen-Image-2.1, queues it on
-the local server, waits for it to finish and prints the paths of the saved images.
+Builds an API-format prompt (FLUX 3 Image Klein, Qwen-Image-2.1, SeedVR2, or the Klein
+region detailer), queues it on the local server, waits for it to finish and prints the
+paths of the saved images.
 Settings mirror the official ComfyUI templates. Standard library only.
 
   python comfy_gen.py --comfy-root C:/AI/ComfyUI/ComfyUI klein "a red fox in snow"
   python comfy_gen.py ... qwen "replace the jacket with the one in image 2" --ref a.png --ref b.png
+  python comfy_gen.py ... detail --image shot.png --detect "face:2" --ref face.png
 """
 import argparse
 import json
@@ -233,7 +235,94 @@ DEFAULT_UPSCALE_PROMPT = (
     "A high-resolution version of <ref_image_0>: identical composition, subjects, colors and lighting, "
     "with sharp focus and fine, natural detail in every texture.")
 
-BUILDERS = {"klein": build_klein, "qwen": build_qwen, "seedvr2": build_seedvr2, "klein-up": build_klein_upscale}
+SAM3_CKPT = "sam3.1_multiplex_fp16.safetensors"
+
+
+def detail_prompt(n_refs):
+    """Default detailer prompt. With references, it names them so Klein matches them."""
+    base = ("A sharp, high-resolution close-up with fine, natural detail and realistic texture. "
+            "Same pose, expression, colors and lighting.")
+    if not n_refs:
+        return base
+    tags = ", ".join(f"<ref_image_{i}>" for i in range(n_refs))
+    return (f"{base} The subject looks exactly like {tags}: "
+            "same face, features, hair, clothing, colors and materials.")
+
+
+def build_detail(a, refs):
+    """ADetailer-style inpaint with FLUX 3 Klein (Impact Pack detailer).
+
+    Each masked region is cropped with context (crop_factor), enlarged so its short side
+    is about --size px, repainted at partial denoise, scaled back and pasted through a
+    feathered mask. The --ref images are fed to Klein as references for every region, so
+    faces and details stay close to them. The region comes from SAM3 text detection
+    (--detect), a mask image (--mask) or rectangles (--box)."""
+    manual = bool(a.mask or a.box)
+    g = {
+        "unet": {"class_type": "UNETLoader", "inputs": {"unet_name": KLEIN["unet"], "weight_dtype": "default"}},
+        "te": {"class_type": "CLIPLoader", "inputs": {"clip_name": KLEIN["te"], "type": "flux3", "device": "default"}},
+        "vae": {"class_type": "VAELoader", "inputs": {"vae_name": KLEIN["vae"]}},
+        "img": {"class_type": "LoadImage", "inputs": {"image": a.image_name}},
+    }
+
+    # ── where to work ──
+    if a.mask:
+        # White = repaint. The red channel works for grayscale and RGB mask files alike.
+        g["mask"] = {"class_type": "LoadImageMask", "inputs": {"image": a.mask_name, "channel": "red"}}
+        mask = ["mask", 0]
+    elif a.box:
+        g["size"] = {"class_type": "GetImageSize", "inputs": {"image": ["img", 0]}}
+        g["box_base"] = {"class_type": "SolidMask", "inputs": {"value": 0.0, "width": ["size", 0], "height": ["size", 1]}}
+        mask = ["box_base", 0]
+        for i, (x, y, w, h) in enumerate(a.box):
+            g[f"box{i}"] = {"class_type": "SolidMask", "inputs": {"value": 1.0, "width": w, "height": h}}
+            g[f"box{i}_add"] = {"class_type": "MaskComposite", "inputs": {
+                "destination": mask, "source": [f"box{i}", 0], "x": x, "y": y, "operation": "add"}}
+            mask = [f"box{i}_add", 0]
+    else:
+        # SAM3 (built into ComfyUI): open-vocabulary detection. "face:4, hand:2" = up to
+        # 4 faces and 2 hands; the masks of everything found are merged.
+        g["sam"] = {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": SAM3_CKPT}}
+        g["sam_text"] = {"class_type": "CLIPTextEncode", "inputs": {"clip": ["sam", 1], "text": a.detect}}
+        g["detect"] = {"class_type": "SAM3_Detect", "inputs": {
+            "model": ["sam", 0], "image": ["img", 0], "conditioning": ["sam_text", 0],
+            "threshold": a.threshold, "refine_iterations": 2, "individual_masks": False}}
+        mask = ["detect", 0]
+
+    grow = a.grow if a.grow is not None else (8 if manual else 16)
+    g["grow"] = {"class_type": "GrowMask", "inputs": {"mask": mask, "expand": grow, "tapered_corners": True}}
+    # combined=False: every separate blob becomes its own region (each face on its own).
+    # contour_fill: holes inside a region are filled, so a painted outline works too.
+    g["segs"] = {"class_type": "MaskToSEGS", "inputs": {
+        "mask": ["grow", 0], "combined": False, "crop_factor": a.crop_factor, "bbox_fill": False,
+        "drop_size": 10 if manual else 32, "contour_fill": True}}
+
+    # ── what to paint: prompt + references (same as Klein edit) ──
+    for i, name in enumerate(refs):
+        g[f"ref{i}"] = {"class_type": "LoadImage", "inputs": {"image": name}}
+    g["pos"] = {"class_type": "CLIPTextEncode", "inputs": {"clip": ["te", 0], "text": a.prompt or detail_prompt(len(refs))}}
+    g["neg"] = {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["pos", 0]}}
+    rml = {"positive": ["pos", 0], "negative": ["neg", 0], "vae": ["vae", 0],
+           "resolution": "resize", "resolution.megapixels": a.ref_mp}
+    rml.update({f"images.image{i}": [f"ref{i}", 0] for i in range(len(refs))})
+    g["refs"] = {"class_type": "ReferenceMultiLatent", "inputs": rml}
+
+    # guide_size_for=False ("crop_region"): the crop's short side is scaled to --size,
+    # the long side capped at --max-size. Klein works best at about 1 MP.
+    g["detail"] = {"class_type": "DetailerForEach", "inputs": {
+        "image": ["img", 0], "segs": ["segs", 0], "model": ["unet", 0], "clip": ["te", 0], "vae": ["vae", 0],
+        "guide_size": a.size, "guide_size_for": False, "max_size": a.max_size, "seed": a.seed,
+        "steps": a.steps or 16, "cfg": 1.0, "sampler_name": "euler", "scheduler": "simple",
+        "positive": ["refs", 0], "negative": ["refs", 1], "denoise": a.denoise,
+        "feather": a.feather, "noise_mask": True, "force_inpaint": True, "wildcard": "", "cycle": 1,
+        "inpaint_model": False, "noise_mask_feather": 20, "tiled_encode": False, "tiled_decode": False}}
+    g["save"] = {"class_type": "SaveImage", "inputs": {
+        "images": ["detail", 0], "filename_prefix": f"detail/{'manual' if manual else 'auto'}"}}
+    return g
+
+
+BUILDERS = {"klein": build_klein, "qwen": build_qwen, "seedvr2": build_seedvr2, "klein-up": build_klein_upscale,
+            "detail": build_detail}
 
 
 # ── talking to the server ─────────────────────────────────────────────────────
@@ -268,7 +357,9 @@ def print_node_errors(err):
 
 
 def run(a):
-    if a.print_graph:   # no server needed; references keep their own names
+    if a.print_graph:   # no server needed; inputs keep their own names
+        a.image_name = a.image and f"gen/{Path(a.image).name}"
+        a.mask_name = a.mask and f"gen/{Path(a.mask).name}"
         graph = BUILDERS[a.model](a, [f"gen/{Path(r).name}" for r in a.ref])
         print(json.dumps(graph, indent=1, ensure_ascii=False))
         return
@@ -280,6 +371,8 @@ def run(a):
         sys.exit(f"ComfyUI is not reachable at {base}. Start it with `nu launch.nu` first.")
 
     refs = stage_refs(a.ref, a.comfy_root) if a.ref else []
+    a.image_name = stage_refs([a.image], a.comfy_root)[0] if a.image else None
+    a.mask_name = stage_refs([a.mask], a.comfy_root)[0] if a.mask else None
     graph = BUILDERS[a.model](a, refs)
 
     try:
@@ -288,7 +381,10 @@ def run(a):
         print_node_errors(json.loads(e.read() or b"{}"))
         sys.exit(1)
     pid = res["prompt_id"]
-    mode = "upscale" if a.model in ("seedvr2", "klein-up") else ("edit" if refs else "t2i")
+    if a.model == "detail":
+        mode = "manual" if (a.mask or a.box) else f"auto [{a.detect}]"
+    else:
+        mode = "upscale" if a.model in ("seedvr2", "klein-up") else ("edit" if refs else "t2i")
     print(f"queued {a.model} {mode}  seed={a.seed}  id={pid}", file=sys.stderr)
 
     t0 = time.time()
@@ -320,17 +416,28 @@ def run(a):
             print(src)      # stdout: one path per image, easy to pipe in Nushell
 
 
+def parse_box(text):
+    try:
+        x, y, w, h = (int(v) for v in text.replace(" ", "").split(","))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"expected X,Y,W,H in pixels, got {text!r}")
+    if w <= 0 or h <= 0 or x < 0 or y < 0:
+        raise argparse.ArgumentTypeError(f"box needs x, y >= 0 and positive width/height: {text!r}")
+    return x, y, w, h
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--comfy-root", required=True, help="the ComfyUI folder (contains main.py)")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8188)
     p.add_argument("model", choices=sorted(BUILDERS))
-    p.add_argument("prompt", nargs="?", default="", help="optional for seedvr2 / klein-up")
-    p.add_argument("--ref", action="append", default=[], help="reference image; repeat for more (edit mode)")
+    p.add_argument("prompt", nargs="?", default="", help="optional for seedvr2 / klein-up / detail")
+    p.add_argument("--ref", action="append", default=[],
+                   help="reference image; repeat for more (edit mode; for detail: identity references)")
     p.add_argument("--upsample", action="store_true", help="rewrite the prompt with the model's prompt enhancer first")
     p.add_argument("--seed", type=int, default=None)
-    p.add_argument("--steps", type=int, default=None, help="default: klein 15 (t2i) / 16 (edit), qwen 25")
+    p.add_argument("--steps", type=int, default=None, help="default: klein 15 (t2i) / 16 (edit, detail), qwen 25")
     p.add_argument("--width", type=int, default=None, help="default 1024; for edits, default = first reference's size")
     p.add_argument("--height", type=int, default=None, help="default = width")
     p.add_argument("--negative", default="", help="qwen only")
@@ -343,8 +450,21 @@ def main(argv=None):
     p.add_argument("--color", choices=["lab", "wavelet", "adain", "none"], default="lab",
                    help="seedvr2: colour matching to the original (lab = most faithful)")
     p.add_argument("--megapixels", type=float, default=4.0, help="klein-up: output size in megapixels (4 = 2x of 1 MP)")
-    p.add_argument("--denoise", type=float, default=0.35,
-                   help="klein-up: how much is repainted (0.25 subtle, 0.35 default, 0.5 strong)")
+    p.add_argument("--denoise", type=float, default=None,
+                   help="klein-up / detail: how much is repainted (klein-up default 0.35, detail default 0.4)")
+    d = p.add_argument_group("detail (ADetailer-style region repaint with Klein; --ref = identity references)")
+    d.add_argument("--image", default=None, help="detail: the image to fix")
+    d.add_argument("--detect", default="face:4",
+                   help='detail: what SAM3 should find, e.g. "face:4, hand:2" (up to N of each). Default face:4')
+    d.add_argument("--mask", default=None, help="detail: mask image, white = repaint (replaces --detect)")
+    d.add_argument("--box", action="append", default=[], type=parse_box, metavar="X,Y,W,H",
+                   help="detail: rectangle to repaint in pixels; repeatable (replaces --detect)")
+    d.add_argument("--threshold", type=float, default=0.5, help="detail: SAM3 confidence threshold")
+    d.add_argument("--size", type=int, default=1024, help="detail: each crop's short side is scaled to this")
+    d.add_argument("--max-size", type=int, default=1536, help="detail: cap for each crop's long side")
+    d.add_argument("--crop-factor", type=float, default=2.5, help="detail: context around a region (x its size)")
+    d.add_argument("--grow", type=int, default=None, help="detail: grow the mask by N px (default 16 detect, 8 mask/box)")
+    d.add_argument("--feather", type=int, default=8, help="detail: blur of the paste-back edge in px")
     p.add_argument("--out", default=None, help="also copy results into this folder")
     p.add_argument("--print-graph", action="store_true", help="print the API prompt instead of queueing it")
     a = p.parse_args(argv)
@@ -352,6 +472,15 @@ def main(argv=None):
         a.seed = random.randrange(2**48)
     if not a.prompt and a.model in ("klein", "qwen"):
         p.error("a prompt is required for klein and qwen")
+    if a.denoise is None:
+        a.denoise = 0.4 if a.model == "detail" else 0.35
+    if a.model == "detail":
+        if not a.image:
+            p.error("detail needs --image")
+        if a.mask and a.box:
+            p.error("use either --mask or --box, not both")
+    elif a.image or a.mask or a.box:
+        p.error("--image, --mask and --box are for the detail mode")
     run(a)
 
 

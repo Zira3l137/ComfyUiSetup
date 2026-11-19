@@ -7,6 +7,7 @@
 #   nu gen.nu qwen "replace the jacket with the one in image 2" --ref model.png --ref jacket.png
 #   nu gen.nu klein "castle" --upsample --seed 42 --width 1344 --height 768 --out renders
 #   nu gen.nu klein "castle" --print-graph | save castle.json   # API graph; drag into ComfyUI
+#   nu gen.nu detail --image shot.png --detect "face:2" --ref face.png   # region detailer (or detail.nu)
 #   nu gen.nu                                                    # full option list
 #
 # --ref switches to edit mode (repeat it for more references: Klein and Qwen

@@ -6,7 +6,7 @@
    - accept the license at https://huggingface.co/black-forest-labs/flux-3-image-klein-comfy
    - create a **Read** token at https://huggingface.co/settings/tokens
    - in Nushell: `$env.HF_TOKEN = "hf_..."` (add it to `env.nu` to keep it; never commit it)
-2. From this folder: `nu install-comfyui.nu C:\AI\ComfyUI`  (SSD; about 52 GB with all defaults)
+2. From this folder: `nu install-comfyui.nu C:\AI\ComfyUI`  (SSD; about 54 GB with all defaults; `--no-detailer` saves 1.8 GB)
 
 ## Day to day (run from the install folder)
 
@@ -16,6 +16,7 @@
 | `nu gen.nu klein "prompt"` | Generate from the terminal. `--ref img.png` (repeatable) = edit mode, `--upsample` = prompt rewrite, `--seed`, `--width/--height`, `--out dir`. Run `nu gen.nu` for all options |
 | `nu gen.nu qwen "prompt"` | Same with Qwen-Image-2.1 (transparent PNGs when asked for) |
 | `nu upscale.nu img.png` | AI upscale: SeedVR2 2x (faithful). `--scale 4`; `--creative` = FLUX 3 Klein redraw with new detail (`--denoise`, `--prompt`, `--megapixels`) |
+| `nu detail.nu img.png [ref.png ...]` | Region detailer ("ADetailer"): SAM3 finds faces (`--detect "face:2, hand:4"`), or `--mask m.png` / `--box "x,y,w,h"`; each region is redone by Klein at ~1 MP, kept close to the reference images, and pasted back. `--denoise`, `--prompt` |
 | `nu free.nu` | Unload models and free RAM (do this when switching Klein to Qwen) |
 | `nu status.nu` | Installed models + sizes, repo versions, live RAM/VRAM |
 | `nu update.nu` | Pull ComfyUI + custom nodes, refresh dependencies (stop ComfyUI first) |
@@ -31,7 +32,10 @@
 - **Upscale - SeedVR2 (faithful)**: restores detail at 2x (or 4x) and keeps the image as it is. Before/after slider included.
 - **Upscale - Klein (creative)**: enlarges to ~4 MP, then Klein repaints at denoise 0.35 while looking at the original. Raise denoise for more invented detail, lower it to stay closer.
 
-Outputs land in `ComfyUI/output/klein/`, `ComfyUI/output/qwen/` and `ComfyUI/output/upscale/`.
+- **Detail - Klein (manual mask)**: right-click the image > *Open in MaskEditor*, paint what to redo. Each painted blob is cropped with context, enlarged to ~1 MP, repainted by Klein (denoise 0.4) and pasted back with a soft edge. *Reference 1* (`<ref_image_0>`) keeps faces/objects close to your reference; bypass it (Ctrl+B) if you have none.
+- **Detail - Klein (auto detect)**: same, but SAM3 finds the regions from words: `face:4`, `face:2, hand:4`. *Detected mask* shows what it found.
+
+Outputs land in `ComfyUI/output/klein/`, `ComfyUI/output/qwen/`, `ComfyUI/output/upscale/` and `ComfyUI/output/detail/`.
 
 With 16 GB RAM, keep the upsampler/enhancer off unless you need it, and use one model family per session (or `free.nu` between them).
 

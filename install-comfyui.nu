@@ -7,6 +7,8 @@
 #   • Qwen-Image-2.1 (GGUF Q4_K)            - transparent (RGBA) output, mask edits
 #   • Qwen-Image-2.1 prompt enhancers (W4A8, t2i + edit)
 #   • SeedVR2 3B (INT8)                     - faithful AI upscaling
+#   • Impact Pack + SAM3.1 (FP16, 1.7 GB)   - region detailer ("ADetailer"): masks or
+#                                             SAM3 detection, repainted by Klein
 #
 # Target: Windows 11, RTX 3060 12 GB, 16 GB RAM, Nushell 0.114, uv, git.
 #
@@ -16,6 +18,7 @@
 #   nu install-comfyui.nu C:\AI\ComfyUI --no-upsampler     # skip the 6.7 GB Klein upsampler
 #   nu install-comfyui.nu C:\AI\ComfyUI --no-qwen-enhancer # skip the 2 x 6.7 GB Qwen enhancers
 #   nu install-comfyui.nu C:\AI\ComfyUI --seedvr2-7b       # also the 8.3 GB SeedVR2 7B upscaler
+#   nu install-comfyui.nu C:\AI\ComfyUI --no-detailer      # skip Impact Pack + SAM3 (detail workflows)
 #   nu install-comfyui.nu --help                            # list all options
 #
 # Re-running is safe: repos are fast-forwarded (git pull), downloaded model
@@ -32,6 +35,11 @@ const KLEIN_REPO = "black-forest-labs/flux-3-image-klein-comfy"   # gated: accep
 const QWEN_REPO  = "Comfy-Org/Qwen-Image-2.1"
 const QWEN_GGUF_REPO = "leejet/Qwen-Image-2.1-GGUF"
 const SEEDVR2_REPO = "Comfy-Org/SeedVR2"
+const SAM3_REPO = "Comfy-Org/sam3.1"       # not gated
+
+# Impact Pack: its DetailerForEach does the crop / enlarge / repaint / paste-back loop
+# for every masked region. Detection itself uses SAM3, which is built into ComfyUI.
+const IMPACT_REPO = "https://github.com/ltdrdata/ComfyUI-Impact-Pack"
 
 # The leejet fork of ComfyUI-GGUF: its loader lists the qwen_image21 architecture.
 # The original city96 node is reported to fail on these files with
@@ -85,6 +93,7 @@ def main [
     --no-qwen-enhancer              # Skip the two 6.7 GB Qwen prompt enhancers
     --no-seedvr2                    # Skip the SeedVR2 upscaler
     --seedvr2-7b                    # Also fetch the bigger 8.3 GB SeedVR2 7B model
+    --no-detailer                   # Skip the region detailer (Impact Pack + 1.7 GB SAM3.1)
     --qwen-format: string = "gguf"  # "gguf" (bundled workflows use it) or "int8" (official file, no custom node)
     --qwen-quant: string = "Q4_K"   # GGUF quant from the leejet repo: Q2_K Q3_K Q4_0 Q4_K Q5_0 Q6_K Q8_0
 ] {
@@ -124,7 +133,8 @@ def main [
     let qwen_base_gb = if $qwen_format == "int8" { 14.3 } else { 11.2 }
     let qwen_gb = if $no_qwen { 0.0 } else if $no_qwen_enhancer { $qwen_base_gb } else { $qwen_base_gb + 13.4 }
     let seedvr2_gb = if $no_seedvr2 { 0.0 } else if $seedvr2_7b { 12.3 } else { 4.0 }
-    let total_gb = $klein_gb + $qwen_gb + $seedvr2_gb + 6.0   # + about 6 GB for ComfyUI and the venv
+    let detailer_gb = if $no_detailer { 0.0 } else { 1.8 }
+    let total_gb = $klein_gb + $qwen_gb + $seedvr2_gb + $detailer_gb + 6.0   # + about 6 GB for ComfyUI and the venv
     print $"  install dir : ($install_dir)"
     print $"  disk needed : about ($total_gb | math round --precision 1) GB, plus about 3 GB in the uv cache on drive C"
 
@@ -186,6 +196,16 @@ def main [
         ^uv pip install --python $py --upgrade gguf
     }
 
+    # ── 3b. Impact Pack (region detailer) ────────────────────────────────────
+    # Only git + requirements.txt. Its install.py is not run: that would download the
+    # old SAM ViT-B model for the Impact SAM editor, which these workflows don't use.
+    if not $no_detailer {
+        step "Installing ComfyUI-Impact-Pack"
+        let node = ($comfy | path join "custom_nodes" "ComfyUI-Impact-Pack")
+        git-sync $IMPACT_REPO $node
+        ^uv pip install --python $py -r ($node | path join "requirements.txt")
+    }
+
     # ── 4. FLUX 3 Image Klein ────────────────────────────────────────────────
     # The distilled checkpoint (15-16 steps). The "base" one needs about 50 steps.
     step "Downloading FLUX 3 Image Klein (INT8, distilled)"
@@ -231,6 +251,13 @@ def main [
         }
     }
 
+    # ── 5c. SAM3.1 detector (detail workflows) ───────────────────────────────
+    # Loaded with the core "Load Checkpoint" node, so it goes in models/checkpoints.
+    if not $no_detailer {
+        step "Downloading SAM3.1 (detector for the detail workflows)"
+        hf-get $SAM3_REPO "checkpoints/sam3.1_multiplex_fp16.safetensors" $models  # 1.7 GB
+    }
+
     # ── 6. helper scripts and the generator ──────────────────────────────────
     step "Copying helper scripts"
     for f in (ls ($pkg | path join "scripts") | get name) {
@@ -259,6 +286,7 @@ def main [
         let name = ($f | path basename)
         if $no_qwen and ($name | str starts-with "Qwen") { continue }
         if $no_seedvr2 and ($name | str contains "SeedVR2") { continue }
+        if $no_detailer and ($name | str starts-with "Detail") { continue }
         let dest = ($wf_dest | path join $name)
         if $gguf_name == $DEFAULT_GGUF {
             cp $f $dest
@@ -281,5 +309,8 @@ def main [
     print $"  Start:   nu '($install_dir | path join launch.nu)'"
     print "  Then:    Workflows sidebar > tailored, or from a terminal: nu gen.nu klein \"a red fox in snow\""
     print "  Upscale: nu upscale.nu photo.png   (add --creative for the FLUX 3 Klein redraw)"
+    if not $no_detailer {
+        print "  Detail:  nu detail.nu shot.png face.png   (faces found by SAM3, kept close to face.png)"
+    }
     print "  Also:    status.nu (models, memory), free.nu (unload models), update.nu (pull + deps)"
 }
