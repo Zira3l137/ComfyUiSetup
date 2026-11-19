@@ -1,9 +1,489 @@
 {
  "id": "klein-detail-manual",
  "revision": 0,
- "last_node_id": 17,
- "last_link_id": 21,
+ "last_node_id": 48,
+ "last_link_id": 33,
  "nodes": [
+  {
+   "id": 30,
+   "type": "PrimitiveNode",
+   "pos": [
+    -560,
+    60
+   ],
+   "size": [
+    460,
+    200
+   ],
+   "flags": {},
+   "order": 0,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "STRING",
+     "type": "STRING",
+     "widget": {
+      "name": "text"
+     },
+     "links": [
+      2
+     ]
+    }
+   ],
+   "properties": {
+    "Run widget replace on values": false
+   },
+   "widgets_values": [
+    "A sharp, high-resolution close-up with fine, natural detail and realistic texture. Same pose, expression, colors and lighting. The subject looks exactly like <ref_image_0>: same face, features, hair, clothing, colors and materials."
+   ],
+   "widgets_values_named": {
+    "value": "A sharp, high-resolution close-up with fine, natural detail and realistic texture. Same pose, expression, colors and lighting. The subject looks exactly like <ref_image_0>: same face, features, hair, clothing, colors and materials."
+   },
+   "title": "Prompt (what the repainted regions should look like)",
+   "color": "#232",
+   "bgcolor": "#353"
+  },
+  {
+   "id": 32,
+   "type": "PrimitiveNode",
+   "pos": [
+    -560,
+    310
+   ],
+   "size": [
+    460,
+    82
+   ],
+   "flags": {},
+   "order": 1,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "FLOAT",
+     "type": "FLOAT",
+     "widget": {
+      "name": "denoise"
+     },
+     "links": [
+      25
+     ]
+    }
+   ],
+   "properties": {
+    "Run widget replace on values": false
+   },
+   "widgets_values": [
+    0.4,
+    "fixed"
+   ],
+   "widgets_values_named": {
+    "value": 0.4,
+    "control_after_generate": "fixed"
+   },
+   "title": "Strength: 0.3 subtle · 0.4 default · 0.6 strong"
+  },
+  {
+   "id": 33,
+   "type": "PrimitiveNode",
+   "pos": [
+    -560,
+    435
+   ],
+   "size": [
+    460,
+    82
+   ],
+   "flags": {},
+   "order": 2,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "INT",
+     "type": "INT",
+     "widget": {
+      "name": "seed"
+     },
+     "links": [
+      23
+     ]
+    }
+   ],
+   "properties": {
+    "Run widget replace on values": false
+   },
+   "widgets_values": [
+    0,
+    "randomize"
+   ],
+   "widgets_values_named": {
+    "value": 0,
+    "control_after_generate": "randomize"
+   },
+   "title": "Seed (each extra region uses seed + 1)"
+  },
+  {
+   "id": 40,
+   "type": "PrimitiveNode",
+   "pos": [
+    -560,
+    640
+   ],
+   "size": [
+    460,
+    82
+   ],
+   "flags": {},
+   "order": 3,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "INT",
+     "type": "INT",
+     "widget": {
+      "name": "expand"
+     },
+     "links": [
+      10
+     ]
+    }
+   ],
+   "properties": {
+    "Run widget replace on values": false
+   },
+   "widgets_values": [
+    8,
+    "fixed"
+   ],
+   "widgets_values_named": {
+    "value": 8,
+    "control_after_generate": "fixed"
+   },
+   "title": "Grow mask (px margin around each region)"
+  },
+  {
+   "id": 41,
+   "type": "PrimitiveNode",
+   "pos": [
+    -560,
+    765
+   ],
+   "size": [
+    460,
+    82
+   ],
+   "flags": {},
+   "order": 4,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "FLOAT",
+     "type": "FLOAT",
+     "widget": {
+      "name": "crop_factor"
+     },
+     "links": [
+      12
+     ]
+    }
+   ],
+   "properties": {
+    "Run widget replace on values": false
+   },
+   "widgets_values": [
+    2.5,
+    "fixed"
+   ],
+   "widgets_values_named": {
+    "value": 2.5,
+    "control_after_generate": "fixed"
+   },
+   "title": "Context around region (× its size, 2.5 default)"
+  },
+  {
+   "id": 42,
+   "type": "PrimitiveNode",
+   "pos": [
+    -560,
+    890
+   ],
+   "size": [
+    460,
+    82
+   ],
+   "flags": {},
+   "order": 5,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "FLOAT",
+     "type": "FLOAT",
+     "widget": {
+      "name": "guide_size"
+     },
+     "links": [
+      21
+     ]
+    }
+   ],
+   "properties": {
+    "Run widget replace on values": false
+   },
+   "widgets_values": [
+    1024,
+    "fixed"
+   ],
+   "widgets_values_named": {
+    "value": 1024,
+    "control_after_generate": "fixed"
+   },
+   "title": "Work size: region short side px (~1024)"
+  },
+  {
+   "id": 43,
+   "type": "PrimitiveNode",
+   "pos": [
+    -560,
+    1015
+   ],
+   "size": [
+    460,
+    82
+   ],
+   "flags": {},
+   "order": 6,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "FLOAT",
+     "type": "FLOAT",
+     "widget": {
+      "name": "max_size"
+     },
+     "links": [
+      22
+     ]
+    }
+   ],
+   "properties": {
+    "Run widget replace on values": false
+   },
+   "widgets_values": [
+    1536,
+    "fixed"
+   ],
+   "widgets_values_named": {
+    "value": 1536,
+    "control_after_generate": "fixed"
+   },
+   "title": "Work size cap: region long side max px"
+  },
+  {
+   "id": 44,
+   "type": "PrimitiveNode",
+   "pos": [
+    -560,
+    1140
+   ],
+   "size": [
+    460,
+    82
+   ],
+   "flags": {},
+   "order": 7,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "INT",
+     "type": "INT",
+     "widget": {
+      "name": "steps"
+     },
+     "links": [
+      24
+     ]
+    }
+   ],
+   "properties": {
+    "Run widget replace on values": false
+   },
+   "widgets_values": [
+    16,
+    "fixed"
+   ],
+   "widgets_values_named": {
+    "value": 16,
+    "control_after_generate": "fixed"
+   },
+   "title": "Steps (Klein distilled: 16)"
+  },
+  {
+   "id": 45,
+   "type": "PrimitiveNode",
+   "pos": [
+    -560,
+    1265
+   ],
+   "size": [
+    460,
+    82
+   ],
+   "flags": {},
+   "order": 8,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "INT",
+     "type": "INT",
+     "widget": {
+      "name": "feather"
+     },
+     "links": [
+      26
+     ]
+    }
+   ],
+   "properties": {
+    "Run widget replace on values": false
+   },
+   "widgets_values": [
+    8,
+    "fixed"
+   ],
+   "widgets_values_named": {
+    "value": 8,
+    "control_after_generate": "fixed"
+   },
+   "title": "Seam blur when pasting back (px)"
+  },
+  {
+   "id": 46,
+   "type": "PrimitiveNode",
+   "pos": [
+    -560,
+    1390
+   ],
+   "size": [
+    460,
+    82
+   ],
+   "flags": {},
+   "order": 9,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "INT",
+     "type": "INT",
+     "widget": {
+      "name": "noise_mask_feather"
+     },
+     "links": [
+      28
+     ]
+    }
+   ],
+   "properties": {
+    "Run widget replace on values": false
+   },
+   "widgets_values": [
+    20,
+    "fixed"
+   ],
+   "widgets_values_named": {
+    "value": 20,
+    "control_after_generate": "fixed"
+   },
+   "title": "Repaint edge falloff (px, 0 = hard edge)"
+  },
+  {
+   "id": 47,
+   "type": "PrimitiveNode",
+   "pos": [
+    -560,
+    1515
+   ],
+   "size": [
+    460,
+    82
+   ],
+   "flags": {},
+   "order": 10,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "INT",
+     "type": "INT",
+     "widget": {
+      "name": "drop_size"
+     },
+     "links": [
+      13
+     ]
+    }
+   ],
+   "properties": {
+    "Run widget replace on values": false
+   },
+   "widgets_values": [
+    10,
+    "fixed"
+   ],
+   "widgets_values_named": {
+    "value": 10,
+    "control_after_generate": "fixed"
+   },
+   "title": "Skip regions smaller than (px)"
+  },
+  {
+   "id": 48,
+   "type": "PrimitiveNode",
+   "pos": [
+    -560,
+    1640
+   ],
+   "size": [
+    460,
+    82
+   ],
+   "flags": {},
+   "order": 11,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "INT",
+     "type": "INT",
+     "widget": {
+      "name": "cycle"
+     },
+     "links": [
+      27
+     ]
+    }
+   ],
+   "properties": {
+    "Run widget replace on values": false
+   },
+   "widgets_values": [
+    1,
+    "fixed"
+   ],
+   "widgets_values_named": {
+    "value": 1,
+    "control_after_generate": "fixed"
+   },
+   "title": "Passes (2 = repaint result again, 2× time)"
+  },
   {
    "id": 1,
    "type": "UNETLoader",
@@ -16,7 +496,7 @@
     90
    ],
    "flags": {},
-   "order": 0,
+   "order": 12,
    "mode": 0,
    "inputs": [],
    "outputs": [
@@ -25,7 +505,7 @@
      "type": "MODEL",
      "slot_index": 0,
      "links": [
-      12
+      16
      ]
     }
    ],
@@ -60,7 +540,7 @@
     120
    ],
    "flags": {},
-   "order": 1,
+   "order": 13,
    "mode": 0,
    "inputs": [],
    "outputs": [
@@ -70,7 +550,7 @@
      "slot_index": 0,
      "links": [
       1,
-      13
+      17
      ]
     }
    ],
@@ -107,7 +587,7 @@
     70
    ],
    "flags": {},
-   "order": 2,
+   "order": 14,
    "mode": 0,
    "inputs": [],
    "outputs": [
@@ -116,8 +596,8 @@
      "type": "VAE",
      "slot_index": 0,
      "links": [
-      5,
-      14
+      6,
+      18
      ]
     }
    ],
@@ -150,7 +630,7 @@
     480
    ],
    "flags": {},
-   "order": 3,
+   "order": 15,
    "mode": 0,
    "inputs": [],
    "outputs": [
@@ -159,8 +639,8 @@
      "type": "IMAGE",
      "slot_index": 0,
      "links": [
-      10,
-      18
+      14,
+      30
      ]
     },
     {
@@ -168,7 +648,7 @@
      "type": "MASK",
      "slot_index": 1,
      "links": [
-      8
+      9
      ]
     }
    ],
@@ -181,7 +661,7 @@
    "widgets_values_named": {
     "image": "example.png"
    },
-   "title": "Image to fix (right-click > Open in MaskEditor, paint the area)"
+   "title": "Image to fix: right-click > MaskEditor"
   },
   {
    "id": 7,
@@ -195,50 +675,8 @@
     340
    ],
    "flags": {},
-   "order": 4,
+   "order": 16,
    "mode": 0,
-   "inputs": [],
-   "outputs": [
-    {
-     "name": "IMAGE",
-     "type": "IMAGE",
-     "slot_index": 0,
-     "links": [
-      6
-     ]
-    },
-    {
-     "name": "MASK",
-     "type": "MASK",
-     "slot_index": 1,
-     "links": null
-    }
-   ],
-   "properties": {
-    "Node name for S&R": "LoadImage"
-   },
-   "widgets_values": [
-    "example.png"
-   ],
-   "widgets_values_named": {
-    "image": "example.png"
-   },
-   "title": "Reference 1 (identity; Ctrl+B to bypass if you have none)"
-  },
-  {
-   "id": 8,
-   "type": "LoadImage",
-   "pos": [
-    800,
-    260
-   ],
-   "size": [
-    300,
-    340
-   ],
-   "flags": {},
-   "order": 5,
-   "mode": 4,
    "inputs": [],
    "outputs": [
     {
@@ -265,7 +703,49 @@
    "widgets_values_named": {
     "image": "example.png"
    },
-   "title": "Reference 2 (bypassed: select it, press Ctrl+B to use it)"
+   "title": "Reference 1 (Ctrl+B if none)"
+  },
+  {
+   "id": 8,
+   "type": "LoadImage",
+   "pos": [
+    800,
+    260
+   ],
+   "size": [
+    300,
+    340
+   ],
+   "flags": {},
+   "order": 17,
+   "mode": 4,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "slot_index": 0,
+     "links": [
+      8
+     ]
+    },
+    {
+     "name": "MASK",
+     "type": "MASK",
+     "slot_index": 1,
+     "links": null
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadImage"
+   },
+   "widgets_values": [
+    "example.png"
+   ],
+   "widgets_values_named": {
+    "image": "example.png"
+   },
+   "title": "Reference 2 (off: Ctrl+B to use)"
   },
   {
    "id": 9,
@@ -279,13 +759,21 @@
     220
    ],
    "flags": {},
-   "order": 6,
+   "order": 18,
    "mode": 0,
    "inputs": [
     {
      "name": "clip",
      "type": "CLIP",
      "link": 1
+    },
+    {
+     "name": "text",
+     "type": "STRING",
+     "widget": {
+      "name": "text"
+     },
+     "link": 2
     }
    ],
    "outputs": [
@@ -294,8 +782,8 @@
      "type": "CONDITIONING",
      "slot_index": 0,
      "links": [
-      2,
-      3
+      3,
+      4
      ]
     }
    ],
@@ -308,9 +796,7 @@
    "widgets_values_named": {
     "text": "A sharp, high-resolution close-up with fine, natural detail and realistic texture. Same pose, expression, colors and lighting. The subject looks exactly like <ref_image_0>: same face, features, hair, clothing, colors and materials."
    },
-   "title": "Prompt (what the repainted regions should look like)",
-   "color": "#232",
-   "bgcolor": "#353"
+   "title": "Prompt encoder (text comes from Main settings)"
   },
   {
    "id": 10,
@@ -324,13 +810,13 @@
     50
    ],
    "flags": {},
-   "order": 7,
+   "order": 19,
    "mode": 0,
    "inputs": [
     {
      "name": "conditioning",
      "type": "CONDITIONING",
-     "link": 2
+     "link": 3
     }
    ],
    "outputs": [
@@ -339,7 +825,7 @@
      "type": "CONDITIONING",
      "slot_index": 0,
      "links": [
-      4
+      5
      ]
     }
    ],
@@ -361,13 +847,13 @@
     190
    ],
    "flags": {},
-   "order": 8,
+   "order": 20,
    "mode": 0,
    "inputs": [
     {
      "name": "positive",
      "type": "CONDITIONING",
-     "link": 3
+     "link": 4
     },
     {
      "name": "resolution",
@@ -378,25 +864,25 @@
      "name": "negative",
      "type": "CONDITIONING",
      "shape": 7,
-     "link": 4
+     "link": 5
     },
     {
      "name": "vae",
      "type": "VAE",
      "shape": 7,
-     "link": 5
+     "link": 6
     },
     {
      "name": "images.image0",
      "shape": 7,
      "type": "IMAGE",
-     "link": 6
+     "link": 7
     },
     {
      "name": "images.image1",
      "shape": 7,
      "type": "IMAGE",
-     "link": 7
+     "link": 8
     },
     {
      "name": "images.image2",
@@ -411,7 +897,7 @@
      "type": "CONDITIONING",
      "slot_index": 0,
      "links": [
-      15
+      19
      ]
     },
     {
@@ -419,7 +905,7 @@
      "type": "CONDITIONING",
      "slot_index": 1,
      "links": [
-      16
+      20
      ]
     },
     {
@@ -449,13 +935,21 @@
     90
    ],
    "flags": {},
-   "order": 9,
+   "order": 21,
    "mode": 0,
    "inputs": [
     {
      "name": "mask",
      "type": "MASK",
-     "link": 8
+     "link": 9
+    },
+    {
+     "name": "expand",
+     "type": "INT",
+     "widget": {
+      "name": "expand"
+     },
+     "link": 10
     }
    ],
    "outputs": [
@@ -464,7 +958,7 @@
      "type": "MASK",
      "slot_index": 0,
      "links": [
-      9
+      11
      ]
     }
    ],
@@ -493,13 +987,29 @@
     180
    ],
    "flags": {},
-   "order": 10,
+   "order": 22,
    "mode": 0,
    "inputs": [
     {
      "name": "mask",
      "type": "MASK",
-     "link": 9
+     "link": 11
+    },
+    {
+     "name": "crop_factor",
+     "type": "FLOAT",
+     "widget": {
+      "name": "crop_factor"
+     },
+     "link": 12
+    },
+    {
+     "name": "drop_size",
+     "type": "INT",
+     "widget": {
+      "name": "drop_size"
+     },
+     "link": 13
     }
    ],
    "outputs": [
@@ -508,7 +1018,7 @@
      "type": "SEGS",
      "slot_index": 0,
      "links": [
-      11
+      15
      ]
     }
    ],
@@ -543,43 +1053,43 @@
     780
    ],
    "flags": {},
-   "order": 11,
+   "order": 23,
    "mode": 0,
    "inputs": [
     {
      "name": "image",
      "type": "IMAGE",
-     "link": 10
+     "link": 14
     },
     {
      "name": "segs",
      "type": "SEGS",
-     "link": 11
+     "link": 15
     },
     {
      "name": "model",
      "type": "MODEL",
-     "link": 12
+     "link": 16
     },
     {
      "name": "clip",
      "type": "CLIP",
-     "link": 13
+     "link": 17
     },
     {
      "name": "vae",
      "type": "VAE",
-     "link": 14
+     "link": 18
     },
     {
      "name": "positive",
      "type": "CONDITIONING",
-     "link": 15
+     "link": 19
     },
     {
      "name": "negative",
      "type": "CONDITIONING",
-     "link": 16
+     "link": 20
     },
     {
      "name": "detailer_hook",
@@ -592,6 +1102,70 @@
      "type": "SCHEDULER_FUNC",
      "shape": 7,
      "link": null
+    },
+    {
+     "name": "guide_size",
+     "type": "FLOAT",
+     "widget": {
+      "name": "guide_size"
+     },
+     "link": 21
+    },
+    {
+     "name": "max_size",
+     "type": "FLOAT",
+     "widget": {
+      "name": "max_size"
+     },
+     "link": 22
+    },
+    {
+     "name": "seed",
+     "type": "INT",
+     "widget": {
+      "name": "seed"
+     },
+     "link": 23
+    },
+    {
+     "name": "steps",
+     "type": "INT",
+     "widget": {
+      "name": "steps"
+     },
+     "link": 24
+    },
+    {
+     "name": "denoise",
+     "type": "FLOAT",
+     "widget": {
+      "name": "denoise"
+     },
+     "link": 25
+    },
+    {
+     "name": "feather",
+     "type": "INT",
+     "widget": {
+      "name": "feather"
+     },
+     "link": 26
+    },
+    {
+     "name": "cycle",
+     "type": "INT",
+     "widget": {
+      "name": "cycle"
+     },
+     "link": 27
+    },
+    {
+     "name": "noise_mask_feather",
+     "type": "INT",
+     "widget": {
+      "name": "noise_mask_feather"
+     },
+     "link": 28
     }
    ],
    "outputs": [
@@ -600,8 +1174,8 @@
      "type": "IMAGE",
      "slot_index": 0,
      "links": [
-      17,
-      19
+      29,
+      31
      ]
     },
     {
@@ -609,7 +1183,7 @@
      "type": "IMAGE",
      "slot_index": 1,
      "links": [
-      20
+      32
      ]
     },
     {
@@ -617,7 +1191,7 @@
      "type": "IMAGE",
      "slot_index": 2,
      "links": [
-      21
+      33
      ]
     },
     {
@@ -678,7 +1252,7 @@
     "tiled_encode": false,
     "tiled_decode": false
    },
-   "title": "Detailer (denoise = how much is repainted)"
+   "title": "Detailer (values from Settings)"
   },
   {
    "id": 13,
@@ -692,13 +1266,13 @@
     460
    ],
    "flags": {},
-   "order": 12,
+   "order": 24,
    "mode": 0,
    "inputs": [
     {
      "name": "images",
      "type": "IMAGE",
-     "link": 17
+     "link": 29
     }
    ],
    "outputs": [
@@ -731,20 +1305,20 @@
     460
    ],
    "flags": {},
-   "order": 13,
+   "order": 25,
    "mode": 0,
    "inputs": [
     {
      "name": "image_a",
      "type": "IMAGE",
      "shape": 7,
-     "link": 18
+     "link": 30
     },
     {
      "name": "image_b",
      "type": "IMAGE",
      "shape": 7,
-     "link": 19
+     "link": 31
     }
    ],
    "outputs": [],
@@ -767,13 +1341,13 @@
     320
    ],
    "flags": {},
-   "order": 14,
+   "order": 26,
    "mode": 0,
    "inputs": [
     {
      "name": "images",
      "type": "IMAGE",
-     "link": 20
+     "link": 32
     }
    ],
    "outputs": [
@@ -803,13 +1377,13 @@
     320
    ],
    "flags": {},
-   "order": 15,
+   "order": 27,
    "mode": 0,
    "inputs": [
     {
      "name": "images",
      "type": "IMAGE",
-     "link": 21
+     "link": 33
     }
    ],
    "outputs": [
@@ -839,13 +1413,13 @@
     480
    ],
    "flags": {},
-   "order": 16,
+   "order": 28,
    "mode": 0,
    "properties": {
     "Node name for S&R": "MarkdownNote"
    },
    "widgets_values": [
-    "**Detail, manual mask (FLUX 3 Klein)** - ADetailer-style \"inpaint only masked\"\n\n1. Load the image in **Image to fix**, right-click it > **Open in MaskEditor**, paint over what you want redone (a face, a hand, a sword hilt) and **Save**.\n2. Separate painted blobs become separate regions. A painted outline is filled in.\n3. Describe the region in the prompt if the default doesn't fit (\"a steel sword hilt wrapped in leather\").\n\n**Settings (Detailer node)**\n- **denoise**: 0.3 keeps nearly everything, **0.4 default**, 0.5-0.6 redraws more (fixes broken hands/faces, may drift).\n- **guide_size 1024 / crop_region**: each region (with context) is enlarged so its short side is 1024 px, long side capped by **max_size** (1536). Klein's sweet spot is about 1 MP.\n- **feather** / **noise_mask_feather**: softness of the paste-back seam and of the repaint edge.\n- **cycle 2**: a second pass on the result; sometimes cleaner, twice as slow.\n- Multiple separate regions are done one after another; seed + 1 for each.\n\n**References**: *Reference 1* is fed to Klein for every region, so a face stays the face in the reference. The prompt refers to it as `<ref_image_0>` (and `<ref_image_1>` for Reference 2). No reference? Bypass Reference 1 (Ctrl+B) and drop the sentence with `<ref_image_0>` from the prompt.\n\n**Mask to regions**: *crop_factor* = context around each region (2.5 = 2.5x its size); *drop_size* skips tiny blobs.\n\n*Regions before/after* show each crop; *Before / after* the whole image. Output: `output/detail/`. Transparency is not kept.\n"
+    "**Detail, manual mask (FLUX 3 Klein)** - ADetailer-style \"inpaint only masked\"\n\n1. Load the image in **Image to fix**, right-click it > **Open in MaskEditor**, paint over what you want redone (a face, a hand, a sword hilt) and **Save**.\n2. Separate painted blobs become separate regions. A painted outline is filled in.\n3. Describe the region in **Prompt** if the default doesn't fit (\"a steel sword hilt wrapped in leather\").\n\n**All settings are in the two groups on the left** (Main settings, Fine-tuning); the titles say what each does. The nodes they feed show the same values greyed out, nothing to change there.\n- **Strength**: 0.3 keeps nearly everything, **0.4 default**, 0.5-0.6 redraws more (fixes broken hands/faces, may drift from the reference).\n- **Work size**: each region (with its context) is enlarged so its short side is 1024 px, long side capped at 1536. Klein's sweet spot is about 1 MP; lower it to go faster.\n- **Seam blur / Repaint edge falloff**: raise them if you see a visible border around a region.\n- Separate regions are done one after another; each uses seed + 1.\n\n**References**: *Reference 1* is fed to Klein for every region, so a face stays the face in the reference. The prompt refers to it as `<ref_image_0>` (and `<ref_image_1>` for Reference 2). No reference? Bypass Reference 1 (Ctrl+B) and drop the sentence with `<ref_image_0>` from the prompt.\n\n*Regions before/after* show each crop; *Before / after* the whole image. Output: `output/detail/`. Transparency is not kept.\n"
    ],
    "inputs": [],
    "outputs": [],
@@ -863,6 +1437,14 @@
   ],
   [
    2,
+   30,
+   0,
+   9,
+   1,
+   "STRING"
+  ],
+  [
+   3,
    9,
    0,
    10,
@@ -870,7 +1452,7 @@
    "CONDITIONING"
   ],
   [
-   3,
+   4,
    9,
    0,
    11,
@@ -878,7 +1460,7 @@
    "CONDITIONING"
   ],
   [
-   4,
+   5,
    10,
    0,
    11,
@@ -886,7 +1468,7 @@
    "CONDITIONING"
   ],
   [
-   5,
+   6,
    3,
    0,
    11,
@@ -894,7 +1476,7 @@
    "VAE"
   ],
   [
-   6,
+   7,
    7,
    0,
    11,
@@ -902,7 +1484,7 @@
    "IMAGE"
   ],
   [
-   7,
+   8,
    8,
    0,
    11,
@@ -910,7 +1492,7 @@
    "IMAGE"
   ],
   [
-   8,
+   9,
    4,
    1,
    5,
@@ -918,7 +1500,15 @@
    "MASK"
   ],
   [
-   9,
+   10,
+   40,
+   0,
+   5,
+   1,
+   "INT"
+  ],
+  [
+   11,
    5,
    0,
    6,
@@ -926,7 +1516,23 @@
    "MASK"
   ],
   [
-   10,
+   12,
+   41,
+   0,
+   6,
+   1,
+   "FLOAT"
+  ],
+  [
+   13,
+   47,
+   0,
+   6,
+   2,
+   "INT"
+  ],
+  [
+   14,
    4,
    0,
    12,
@@ -934,7 +1540,7 @@
    "IMAGE"
   ],
   [
-   11,
+   15,
    6,
    0,
    12,
@@ -942,7 +1548,7 @@
    "SEGS"
   ],
   [
-   12,
+   16,
    1,
    0,
    12,
@@ -950,7 +1556,7 @@
    "MODEL"
   ],
   [
-   13,
+   17,
    2,
    0,
    12,
@@ -958,7 +1564,7 @@
    "CLIP"
   ],
   [
-   14,
+   18,
    3,
    0,
    12,
@@ -966,7 +1572,7 @@
    "VAE"
   ],
   [
-   15,
+   19,
    11,
    0,
    12,
@@ -974,7 +1580,7 @@
    "CONDITIONING"
   ],
   [
-   16,
+   20,
    11,
    1,
    12,
@@ -982,7 +1588,71 @@
    "CONDITIONING"
   ],
   [
-   17,
+   21,
+   42,
+   0,
+   12,
+   9,
+   "FLOAT"
+  ],
+  [
+   22,
+   43,
+   0,
+   12,
+   10,
+   "FLOAT"
+  ],
+  [
+   23,
+   33,
+   0,
+   12,
+   11,
+   "INT"
+  ],
+  [
+   24,
+   44,
+   0,
+   12,
+   12,
+   "INT"
+  ],
+  [
+   25,
+   32,
+   0,
+   12,
+   13,
+   "FLOAT"
+  ],
+  [
+   26,
+   45,
+   0,
+   12,
+   14,
+   "INT"
+  ],
+  [
+   27,
+   48,
+   0,
+   12,
+   15,
+   "INT"
+  ],
+  [
+   28,
+   46,
+   0,
+   12,
+   16,
+   "INT"
+  ],
+  [
+   29,
    12,
    0,
    13,
@@ -990,7 +1660,7 @@
    "IMAGE"
   ],
   [
-   18,
+   30,
    4,
    0,
    14,
@@ -998,7 +1668,7 @@
    "IMAGE"
   ],
   [
-   19,
+   31,
    12,
    0,
    14,
@@ -1006,7 +1676,7 @@
    "IMAGE"
   ],
   [
-   20,
+   32,
    12,
    1,
    15,
@@ -1014,7 +1684,7 @@
    "IMAGE"
   ],
   [
-   21,
+   33,
    12,
    2,
    16,
@@ -1022,7 +1692,34 @@
    "IMAGE"
   ]
  ],
- "groups": [],
+ "groups": [
+  {
+   "id": 1,
+   "title": "Main settings",
+   "bounding": [
+    -580,
+    0,
+    500,
+    540
+   ],
+   "color": "#3f789e",
+   "font_size": 24,
+   "flags": {}
+  },
+  {
+   "id": 2,
+   "title": "Fine-tuning",
+   "bounding": [
+    -580,
+    580,
+    500,
+    1185
+   ],
+   "color": "#444",
+   "font_size": 24,
+   "flags": {}
+  }
+ ],
  "config": {},
  "extra": {
   "ds": {

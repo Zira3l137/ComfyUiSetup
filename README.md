@@ -23,8 +23,10 @@
 
 ## Workflows (ComfyUI sidebar > Workflows > tailored)
 
-- **Klein - Text to Image**: distilled INT8, 15 steps. Subgraph switch = upsampler (off by default).
-- **Klein - Edit (multi-reference)**: write the instruction in *Flux3LayoutPrompt* (`<ref_image_0>`, `<obj_1>` for boxes). *Reference 2* is bypassed; Ctrl+B enables it. Upsampler switch: true = on.
+Every workflow has the same layout: notes on the far left, then the settings in two groups, **Main settings** and **Fine-tuning** (each node's title says what it does and what's sensible), then the pipeline left to right. The nodes those settings feed show the values greyed out; nothing needs changing there. No subgraphs: everything is visible.
+
+- **Klein - Text to Image**: distilled INT8, 16 steps (template values). Prompt upsampler off by default.
+- **Klein - Edit (multi-reference)**: write the instruction in *Prompt* (`<ref_image_0>`, `<obj_1>` for boxes). *Reference 2* is bypassed; Ctrl+B enables it. Prompt upsampler off by default.
 - **Qwen - Text to Image (GGUF)**: Q4_K + W4A8 encoder, 25 steps, KV cache int8.
 - **Qwen - Edit (GGUF)**: up to 10 references; output matches the first reference's size.
 - **Qwen - Remove Background (GGUF)**: RGBA PNG cut-outs.
