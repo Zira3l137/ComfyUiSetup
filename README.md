@@ -15,7 +15,7 @@
 | `nu launch.nu` | Start ComfyUI with the tuning below (Manager on, previews on, opens the browser). `--stock` = plain defaults, `--no-browser`; other flags pass through |
 | `nu gen.nu klein "prompt"` | Generate from the terminal. `--ref img.png` (repeatable) = edit mode, `--upsample` = prompt rewrite, `--seed`, `--width/--height`, `--out dir`. Run `nu gen.nu` for all options |
 | `nu gen.nu qwen "prompt"` | Same with Qwen-Image-2.1 (transparent PNGs when asked for) |
-| `nu upscale.nu img.png` | AI upscale: SeedVR2 2x (faithful). `--scale 4`; `--creative` = FLUX 3 Klein redraw with new detail (`--denoise`, `--prompt`, `--megapixels`) |
+| `nu upscale.nu img.png [ref.png ...]` | AI upscale: SeedVR2 2x (faithful). `--scale 4`; `--creative` = FLUX 3 Klein redraw with new detail (`--denoise`, `--prompt`; output = original x `--scale`; extra images = references that keep the subject from drifting) |
 | `nu detail.nu img.png [ref.png ...]` | Region detailer ("ADetailer"): SAM3 finds faces (`--detect "face:2, hand:4"`), or `--mask m.png` / `--box "x,y,w,h"`; each region is redone by Klein at ~1 MP, kept close to the reference images, and pasted back. `--denoise`, `--prompt` |
 | `nu free.nu` | Unload models and free RAM (do this when switching Klein to Qwen) |
 | `nu status.nu` | Installed models + sizes, repo versions, live RAM/VRAM |
@@ -32,7 +32,7 @@ Every workflow has the same layout: notes on the far left, then the settings in 
 - **Qwen - Remove Background (GGUF)**: RGBA PNG cut-outs.
 
 - **Upscale - SeedVR2 (faithful)**: restores detail at 2x (or 4x) and keeps the image as it is. Before/after slider included.
-- **Upscale - Klein (creative)**: enlarges to ~4 MP, then Klein repaints at denoise 0.35 while looking at the original. Raise denoise for more invented detail, lower it to stay closer.
+- **Upscale - Klein (creative)**: enlarges by a factor (output = original x factor, rounded down to a multiple of 16 px), then Klein repaints at strength 0.35 while looking at the original. *Reference 2/3* (bypassed; Ctrl+B) keep a face or object from drifting: mention them as `<ref_image_1>`, `<ref_image_2>` in the prompt.
 
 - **Detail - Klein (manual mask)**: right-click the image > *Open in MaskEditor*, paint what to redo. Each painted blob is cropped with context, enlarged to ~1 MP, repainted by Klein (denoise 0.4) and pasted back with a soft edge. *Reference 1* (`<ref_image_0>`) keeps faces/objects close to your reference; bypass it (Ctrl+B) if you have none.
 - **Detail - Klein (auto detect)**: same, but SAM3 finds the regions from words: `face:4`, `face:2, hand:4`. *Detected mask* shows what it found.

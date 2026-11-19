@@ -1,15 +1,15 @@
 {
  "id": "klein-creative-upscale",
  "revision": 0,
- "last_node_id": 18,
- "last_link_id": 22,
+ "last_node_id": 24,
+ "last_link_id": 29,
  "nodes": [
   {
    "id": 1,
    "type": "UNETLoader",
    "pos": [
     0,
-    0
+    1206
    ],
    "size": [
     440,
@@ -73,7 +73,7 @@
    "type": "CLIPLoader",
    "pos": [
     0,
-    156
+    1362
    ],
    "size": [
     440,
@@ -149,7 +149,7 @@
    "type": "VAELoader",
    "pos": [
     0,
-    458
+    1664
    ],
    "size": [
     450,
@@ -204,7 +204,7 @@
    "type": "LoadImage",
    "pos": [
     0,
-    594
+    0
    ],
    "size": [
     320,
@@ -240,9 +240,9 @@
      "type": "IMAGE",
      "slot_index": 0,
      "links": [
-      1,
       9,
-      17
+      17,
+      19
      ]
     },
     {
@@ -253,7 +253,7 @@
      "links": null
     }
    ],
-   "title": "Image to upscale",
+   "title": "Image to upscale (= <ref_image_0>)",
    "properties": {
     "Node name for S&R": "LoadImage"
    },
@@ -267,101 +267,25 @@
    }
   },
   {
-   "id": 5,
-   "type": "ImageScaleToTotalPixels",
-   "pos": [
-    520,
-    236
-   ],
-   "size": [
-    300,
-    110
-   ],
-   "flags": {},
-   "order": 10,
-   "mode": 0,
-   "inputs": [
-    {
-     "localized_name": "image",
-     "name": "image",
-     "type": "IMAGE",
-     "link": 1
-    },
-    {
-     "localized_name": "upscale_method",
-     "name": "upscale_method",
-     "type": "COMBO",
-     "widget": {
-      "name": "upscale_method"
-     },
-     "link": null
-    },
-    {
-     "localized_name": "megapixels",
-     "name": "megapixels",
-     "type": "FLOAT",
-     "widget": {
-      "name": "megapixels"
-     },
-     "link": 20
-    },
-    {
-     "localized_name": "resolution_steps",
-     "name": "resolution_steps",
-     "type": "INT",
-     "widget": {
-      "name": "resolution_steps"
-     },
-     "link": null
-    }
-   ],
-   "outputs": [
-    {
-     "localized_name": "IMAGE",
-     "name": "IMAGE",
-     "type": "IMAGE",
-     "links": [
-      2
-     ]
-    }
-   ],
-   "title": "Resize to target size",
-   "properties": {
-    "Node name for S&R": "ImageScaleToTotalPixels",
-    "cnr_id": "comfy-core",
-    "ver": "0.3.44"
-   },
-   "widgets_values": [
-    "lanczos",
-    4,
-    16
-   ],
-   "widgets_values_named": {
-    "upscale_method": "lanczos",
-    "megapixels": 4,
-    "resolution_steps": 16
-   }
-  },
-  {
    "id": 6,
    "type": "VAEEncode",
    "pos": [
-    890,
-    0
+    1210,
+    132
    ],
    "size": [
     140,
     46
    ],
    "flags": {},
-   "order": 12,
+   "order": 16,
    "mode": 0,
    "inputs": [
     {
      "localized_name": "pixels",
      "name": "pixels",
      "type": "IMAGE",
-     "link": 2
+     "link": 21
     },
     {
      "localized_name": "vae",
@@ -398,7 +322,7 @@
     200
    ],
    "flags": {},
-   "order": 9,
+   "order": 11,
    "mode": 0,
    "inputs": [
     {
@@ -447,14 +371,14 @@
    "type": "ConditioningZeroOut",
    "pos": [
     0,
-    342
+    1548
    ],
    "size": [
     230,
     50
    ],
    "flags": {},
-   "order": 11,
+   "order": 13,
    "mode": 0,
    "inputs": [
     {
@@ -487,10 +411,10 @@
    ],
    "size": [
     280,
-    170
+    222
    ],
    "flags": {},
-   "order": 13,
+   "order": 15,
    "mode": 0,
    "inputs": [
     {
@@ -523,6 +447,20 @@
     {
      "localized_name": "image1",
      "name": "images.image1",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": 24
+    },
+    {
+     "localized_name": "image2",
+     "name": "images.image2",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": 25
+    },
+    {
+     "localized_name": "image3",
+     "name": "images.image3",
      "shape": 7,
      "type": "IMAGE",
      "link": null
@@ -588,7 +526,7 @@
    "id": 10,
    "type": "KSampler",
    "pos": [
-    1100,
+    1550.148046875,
     0
    ],
    "size": [
@@ -596,7 +534,7 @@
     520
    ],
    "flags": {},
-   "order": 14,
+   "order": 18,
    "mode": 0,
    "inputs": [
     {
@@ -630,7 +568,7 @@
      "widget": {
       "name": "seed"
      },
-     "link": 21
+     "link": 28
     },
     {
      "localized_name": "steps",
@@ -639,7 +577,7 @@
      "widget": {
       "name": "steps"
      },
-     "link": 22
+     "link": 29
     },
     {
      "localized_name": "cfg",
@@ -675,7 +613,7 @@
      "widget": {
       "name": "denoise"
      },
-     "link": 19
+     "link": 27
     }
    ],
    "outputs": [
@@ -716,7 +654,7 @@
    "id": 11,
    "type": "VAEDecode",
    "pos": [
-    1510,
+    1960.148046875,
     0
    ],
    "size": [
@@ -726,7 +664,7 @@
    "flags": {
     "collapsed": false
    },
-   "order": 15,
+   "order": 20,
    "mode": 0,
    "inputs": [
     {
@@ -762,7 +700,7 @@
    "id": 12,
    "type": "SaveImage",
    "pos": [
-    1790,
+    2240.148046875,
     0
    ],
    "size": [
@@ -770,7 +708,7 @@
     460
    ],
    "flags": {},
-   "order": 16,
+   "order": 21,
    "mode": 0,
    "inputs": [
     {
@@ -811,7 +749,7 @@
    "id": 13,
    "type": "ImageCompare",
    "pos": [
-    1790,
+    2240.148046875,
     526
    ],
    "size": [
@@ -819,7 +757,7 @@
     460
    ],
    "flags": {},
-   "order": 17,
+   "order": 22,
    "mode": 0,
    "inputs": [
     {
@@ -875,16 +813,366 @@
    "title": "Tailored for this setup",
    "properties": {},
    "widgets_values": [
-    "**Upscale, FLUX 3 Klein (creative)**\n\nEnlarges the image, then Klein repaints it lightly while also *looking at the original* (as `<ref_image_0>`), so layout and identity hold while new detail appears.\n\n**All settings are in the groups on the left** (Main settings, Fine-tuning); each title says what it does. The nodes they feed show the same values greyed out: nothing to change there.\n\n- **Strength**: 0.25 subtle, **0.35 default**, 0.45-0.5 strong (starts to change things).\n- **Output size**: 4 MP = about 2x of a 1 MP image. Up to ~6 is fine on 12 GB; for more, run SeedVR2 on the result.\n- **Prompt**: name the detail you want (\"visible skin pores, sharp fabric weave\").\n- Same seed + lower strength = safer. Output: `output/upscale/`"
+    "**Upscale, FLUX 3 Klein (creative)**\n\nEnlarges the image, then Klein repaints it lightly while also *looking at the original* (as `<ref_image_0>`), so layout and identity hold while new detail appears.\n\n**All settings are in the groups on the left** (Main settings, Fine-tuning); each title says what it does. The nodes they feed show the same values greyed out: nothing to change there.\n\n- **Scale factor**: output = original size x factor, rounded down to a multiple of 16 px (at most 15 px trimmed from the edges, aspect kept). *Load Image* shows the original size under the preview; *Output size* shows the result during the run. Klein handles up to about 4 MP comfortably on 12 GB (a 1 MP image at 2x); for bigger, run SeedVR2 on the result.\n- **Strength**: 0.25 subtle, **0.35 default**, 0.45-0.5 strong (starts to change things).\n- **Extra references** (keep a face or object from drifting): enable *Reference 2* / *Reference 3* (select, Ctrl+B), load e.g. a clean close-up of the face, and add a sentence to the prompt such as *\"The person looks exactly like <ref_image_1>: same face, eyes and skin.\"* Each reference costs time and memory.\n- **Prompt**: name the detail you want (\"visible skin pores, sharp fabric weave\").\n- Same seed + lower strength = safer. Output: `output/upscale/`"
    ],
    "widgets_values_named": {
-    "text": "**Upscale, FLUX 3 Klein (creative)**\n\nEnlarges the image, then Klein repaints it lightly while also *looking at the original* (as `<ref_image_0>`), so layout and identity hold while new detail appears.\n\n**All settings are in the groups on the left** (Main settings, Fine-tuning); each title says what it does. The nodes they feed show the same values greyed out: nothing to change there.\n\n- **Strength**: 0.25 subtle, **0.35 default**, 0.45-0.5 strong (starts to change things).\n- **Output size**: 4 MP = about 2x of a 1 MP image. Up to ~6 is fine on 12 GB; for more, run SeedVR2 on the result.\n- **Prompt**: name the detail you want (\"visible skin pores, sharp fabric weave\").\n- Same seed + lower strength = safer. Output: `output/upscale/`"
+    "text": "**Upscale, FLUX 3 Klein (creative)**\n\nEnlarges the image, then Klein repaints it lightly while also *looking at the original* (as `<ref_image_0>`), so layout and identity hold while new detail appears.\n\n**All settings are in the groups on the left** (Main settings, Fine-tuning); each title says what it does. The nodes they feed show the same values greyed out: nothing to change there.\n\n- **Scale factor**: output = original size x factor, rounded down to a multiple of 16 px (at most 15 px trimmed from the edges, aspect kept). *Load Image* shows the original size under the preview; *Output size* shows the result during the run. Klein handles up to about 4 MP comfortably on 12 GB (a 1 MP image at 2x); for bigger, run SeedVR2 on the result.\n- **Strength**: 0.25 subtle, **0.35 default**, 0.45-0.5 strong (starts to change things).\n- **Extra references** (keep a face or object from drifting): enable *Reference 2* / *Reference 3* (select, Ctrl+B), load e.g. a clean close-up of the face, and add a sentence to the prompt such as *\"The person looks exactly like <ref_image_1>: same face, eyes and skin.\"* Each reference costs time and memory.\n- **Prompt**: name the detail you want (\"visible skin pores, sharp fabric weave\").\n- Same seed + lower strength = safer. Output: `output/upscale/`"
    },
    "color": "#432",
    "bgcolor": "#653"
   },
   {
    "id": 15,
+   "type": "ImageScaleBy",
+   "pos": [
+    520,
+    288
+   ],
+   "size": [
+    270,
+    82
+   ],
+   "flags": {},
+   "order": 12,
+   "mode": 0,
+   "inputs": [
+    {
+     "localized_name": "image",
+     "name": "image",
+     "type": "IMAGE",
+     "link": 19
+    },
+    {
+     "localized_name": "upscale_method",
+     "name": "upscale_method",
+     "type": "COMBO",
+     "widget": {
+      "name": "upscale_method"
+     },
+     "link": null
+    },
+    {
+     "localized_name": "scale_by",
+     "name": "scale_by",
+     "type": "FLOAT",
+     "widget": {
+      "name": "scale_by"
+     },
+     "link": 26
+    }
+   ],
+   "outputs": [
+    {
+     "localized_name": "IMAGE",
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      20
+     ]
+    }
+   ],
+   "title": "Enlarge by factor",
+   "properties": {
+    "Node name for S&R": "ImageScaleBy"
+   },
+   "widgets_values": [
+    "lanczos",
+    2
+   ],
+   "widgets_values_named": {
+    "upscale_method": "lanczos",
+    "scale_by": 2
+   }
+  },
+  {
+   "id": 16,
+   "type": "ResizeImageMaskNode",
+   "pos": [
+    870,
+    0
+   ],
+   "size": [
+    270,
+    106
+   ],
+   "flags": {},
+   "order": 14,
+   "mode": 0,
+   "inputs": [
+    {
+     "localized_name": "input",
+     "name": "input",
+     "type": "IMAGE,MASK",
+     "link": 20
+    },
+    {
+     "localized_name": "resize_type",
+     "name": "resize_type",
+     "type": "COMFY_DYNAMICCOMBO_V3",
+     "widget": {
+      "name": "resize_type"
+     },
+     "link": null
+    },
+    {
+     "localized_name": "multiple",
+     "name": "resize_type.multiple",
+     "type": "INT",
+     "widget": {
+      "name": "resize_type.multiple"
+     },
+     "link": null
+    },
+    {
+     "localized_name": "scale_method",
+     "name": "scale_method",
+     "type": "COMBO",
+     "widget": {
+      "name": "scale_method"
+     },
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "localized_name": "resized",
+     "name": "resized",
+     "type": "IMAGE",
+     "links": [
+      21,
+      22
+     ]
+    }
+   ],
+   "title": "Round size to a multiple of 16 px",
+   "properties": {
+    "Node name for S&R": "ResizeImageMaskNode"
+   },
+   "widgets_values": [
+    "scale to multiple",
+    16,
+    "lanczos"
+   ],
+   "widgets_values_named": {
+    "resize_type": "scale to multiple",
+    "resize_type.multiple": 16,
+    "scale_method": "lanczos"
+   }
+  },
+  {
+   "id": 17,
+   "type": "GetImageSize",
+   "pos": [
+    1210,
+    0
+   ],
+   "size": [
+    270.148046875,
+    66
+   ],
+   "flags": {},
+   "order": 17,
+   "mode": 0,
+   "inputs": [
+    {
+     "localized_name": "image",
+     "name": "image",
+     "type": "IMAGE",
+     "link": 22
+    }
+   ],
+   "outputs": [
+    {
+     "localized_name": "width",
+     "name": "width",
+     "type": "INT",
+     "links": [
+      23
+     ]
+    },
+    {
+     "localized_name": "height",
+     "name": "height",
+     "type": "INT",
+     "links": null
+    },
+    {
+     "localized_name": "batch_size",
+     "name": "batch_size",
+     "type": "INT",
+     "links": null
+    }
+   ],
+   "title": "Output size (shown during the run)",
+   "properties": {
+    "Node name for S&R": "GetImageSize"
+   }
+  },
+  {
+   "id": 18,
+   "type": "PreviewAny",
+   "pos": [
+    1550.148046875,
+    586
+   ],
+   "size": [
+    210,
+    122
+   ],
+   "flags": {},
+   "order": 19,
+   "mode": 0,
+   "inputs": [
+    {
+     "localized_name": "source",
+     "name": "source",
+     "type": "*",
+     "link": 23
+    }
+   ],
+   "outputs": [
+    {
+     "localized_name": "STRING",
+     "name": "STRING",
+     "type": "STRING",
+     "links": null
+    }
+   ],
+   "title": "Output width",
+   "properties": {
+    "Node name for S&R": "PreviewAny"
+   },
+   "widgets_values": [],
+   "widgets_values_named": {}
+  },
+  {
+   "id": 19,
+   "type": "LoadImage",
+   "pos": [
+    0,
+    446
+   ],
+   "size": [
+    323.112890625,
+    314
+   ],
+   "flags": {},
+   "order": 5,
+   "mode": 4,
+   "inputs": [
+    {
+     "localized_name": "image",
+     "name": "image",
+     "type": "COMBO",
+     "widget": {
+      "name": "image"
+     },
+     "link": null
+    },
+    {
+     "localized_name": "choose file to upload",
+     "name": "upload",
+     "type": "IMAGEUPLOAD",
+     "widget": {
+      "name": "upload"
+     },
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "localized_name": "IMAGE",
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      24
+     ]
+    },
+    {
+     "localized_name": "MASK",
+     "name": "MASK",
+     "type": "MASK",
+     "links": null
+    }
+   ],
+   "title": "Reference 2 (<ref_image_1>; Ctrl+B to use)",
+   "properties": {
+    "Node name for S&R": "LoadImage"
+   },
+   "widgets_values": [
+    "example.png",
+    "image"
+   ],
+   "widgets_values_named": {
+    "image": "example.png",
+    "upload": "image"
+   }
+  },
+  {
+   "id": 20,
+   "type": "LoadImage",
+   "pos": [
+    0,
+    826
+   ],
+   "size": [
+    327.5767578125,
+    314
+   ],
+   "flags": {},
+   "order": 6,
+   "mode": 4,
+   "inputs": [
+    {
+     "localized_name": "image",
+     "name": "image",
+     "type": "COMBO",
+     "widget": {
+      "name": "image"
+     },
+     "link": null
+    },
+    {
+     "localized_name": "choose file to upload",
+     "name": "upload",
+     "type": "IMAGEUPLOAD",
+     "widget": {
+      "name": "upload"
+     },
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "localized_name": "IMAGE",
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      25
+     ]
+    },
+    {
+     "localized_name": "MASK",
+     "name": "MASK",
+     "type": "MASK",
+     "links": null
+    }
+   ],
+   "title": "Reference 3 (<ref_image_2>; Ctrl+B to use)",
+   "properties": {
+    "Node name for S&R": "LoadImage"
+   },
+   "widgets_values": [
+    "example.png",
+    "image"
+   ],
+   "widgets_values_named": {
+    "image": "example.png",
+    "upload": "image"
+   }
+  },
+  {
+   "id": 21,
    "type": "PrimitiveNode",
    "pos": [
     -560,
@@ -895,7 +1183,47 @@
     82
    ],
    "flags": {},
-   "order": 5,
+   "order": 7,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "FLOAT",
+     "type": "FLOAT",
+     "widget": {
+      "name": "scale_by"
+     },
+     "links": [
+      26
+     ]
+    }
+   ],
+   "title": "Scale factor: output = original x factor",
+   "properties": {
+    "Run widget replace on values": false
+   },
+   "widgets_values": [
+    2,
+    "fixed"
+   ],
+   "widgets_values_named": {
+    "value": 2,
+    "control_after_generate": "fixed"
+   }
+  },
+  {
+   "id": 22,
+   "type": "PrimitiveNode",
+   "pos": [
+    -560,
+    438
+   ],
+   "size": [
+    460,
+    82
+   ],
+   "flags": {},
+   "order": 8,
    "mode": 0,
    "inputs": [],
    "outputs": [
@@ -906,7 +1234,7 @@
       "name": "denoise"
      },
      "links": [
-      19
+      27
      ]
     }
    ],
@@ -924,47 +1252,7 @@
    }
   },
   {
-   "id": 16,
-   "type": "PrimitiveNode",
-   "pos": [
-    -560,
-    438
-   ],
-   "size": [
-    460,
-    82
-   ],
-   "flags": {},
-   "order": 6,
-   "mode": 0,
-   "inputs": [],
-   "outputs": [
-    {
-     "name": "FLOAT",
-     "type": "FLOAT",
-     "widget": {
-      "name": "megapixels"
-     },
-     "links": [
-      20
-     ]
-    }
-   ],
-   "title": "Output size in megapixels (4 ≈ 2x a 1 MP image)",
-   "properties": {
-    "Run widget replace on values": false
-   },
-   "widgets_values": [
-    4,
-    "fixed"
-   ],
-   "widgets_values_named": {
-    "value": 4,
-    "control_after_generate": "fixed"
-   }
-  },
-  {
-   "id": 17,
+   "id": 23,
    "type": "PrimitiveNode",
    "pos": [
     -560,
@@ -975,7 +1263,7 @@
     82
    ],
    "flags": {},
-   "order": 7,
+   "order": 9,
    "mode": 0,
    "inputs": [],
    "outputs": [
@@ -986,7 +1274,7 @@
       "name": "seed"
      },
      "links": [
-      21
+      28
      ]
     }
    ],
@@ -1004,7 +1292,7 @@
    }
   },
   {
-   "id": 18,
+   "id": 24,
    "type": "PrimitiveNode",
    "pos": [
     -560,
@@ -1015,7 +1303,7 @@
     82
    ],
    "flags": {},
-   "order": 8,
+   "order": 10,
    "mode": 0,
    "inputs": [],
    "outputs": [
@@ -1026,7 +1314,7 @@
       "name": "steps"
      },
      "links": [
-      22
+      29
      ]
     }
    ],
@@ -1045,22 +1333,6 @@
   }
  ],
  "links": [
-  [
-   1,
-   4,
-   0,
-   5,
-   0,
-   "IMAGE"
-  ],
-  [
-   2,
-   5,
-   0,
-   6,
-   0,
-   "IMAGE"
-  ],
   [
    3,
    3,
@@ -1159,35 +1431,75 @@
   ],
   [
    19,
+   4,
+   0,
    15,
+   0,
+   "IMAGE"
+  ],
+  [
+   21,
+   16,
+   0,
+   6,
+   0,
+   "IMAGE"
+  ],
+  [
+   22,
+   16,
+   0,
+   17,
+   0,
+   "IMAGE"
+  ],
+  [
+   23,
+   17,
+   0,
+   18,
+   0,
+   "INT"
+  ],
+  [
+   26,
+   21,
+   0,
+   15,
+   2,
+   "FLOAT"
+  ],
+  [
+   27,
+   22,
    0,
    10,
    9,
    "FLOAT"
   ],
   [
-   20,
-   16,
-   0,
-   5,
-   2,
-   "FLOAT"
-  ],
-  [
-   21,
-   17,
+   28,
+   23,
    0,
    10,
    4,
    "INT"
   ],
   [
-   22,
-   18,
+   29,
+   24,
    0,
    10,
    5,
    "INT"
+  ],
+  [
+   20,
+   15,
+   0,
+   16,
+   0,
+   "IMAGE"
   ],
   [
    6,
@@ -1219,6 +1531,22 @@
    0,
    9,
    3,
+   "IMAGE"
+  ],
+  [
+   24,
+   19,
+   0,
+   9,
+   4,
+   "IMAGE"
+  ],
+  [
+   25,
+   20,
+   0,
+   9,
+   5,
    "IMAGE"
   ]
  ],
@@ -1253,10 +1581,10 @@
  "config": {},
  "extra": {
   "ds": {
-   "scale": 0.55,
+   "scale": 0.65,
    "offset": [
-    700,
-    200
+    400,
+    300
    ]
   },
   "reroutes": null

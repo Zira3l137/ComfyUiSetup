@@ -205,30 +205,48 @@ def build_seedvr2(a, refs):
 
 def build_klein_upscale(a, refs):
     """Creative upscale ("hires fix") with FLUX 3 Klein: enlarge, then repaint at partial
-    denoise while the original is also fed in as a reference, so identity and layout hold."""
-    if len(refs) != 1:
-        sys.exit("klein-up needs exactly one --ref image")
+    denoise while the original is also fed in as a reference, so identity and layout hold.
+    The first --ref is the image to upscale (<ref_image_0>); any further --ref images are
+    extra references (<ref_image_1>, ...) that keep a face or object from drifting."""
+    if not refs:
+        sys.exit("klein-up needs the image to upscale as the first --ref")
     prompt = a.prompt or DEFAULT_UPSCALE_PROMPT
-    return {
+    if not a.prompt and len(refs) > 1:
+        tags = ", ".join(f"<ref_image_{i}>" for i in range(1, len(refs)))
+        prompt += f" The subject looks exactly like {tags}: same face, features, colors and materials."
+    g = {
         "unet": {"class_type": "UNETLoader", "inputs": {"unet_name": KLEIN["unet"], "weight_dtype": "default"}},
         "te": {"class_type": "CLIPLoader", "inputs": {"clip_name": KLEIN["te"], "type": "flux3", "device": "default"}},
         "vae": {"class_type": "VAELoader", "inputs": {"vae_name": KLEIN["vae"]}},
-        "img": {"class_type": "LoadImage", "inputs": {"image": refs[0]}},
-        "big": {"class_type": "ImageScaleToTotalPixels", "inputs": {
-            "image": ["img", 0], "upscale_method": "lanczos", "megapixels": a.megapixels, "resolution_steps": 16}},
+    }
+    for i, name in enumerate(refs):
+        g[f"ref{i}"] = {"class_type": "LoadImage", "inputs": {"image": name}}
+    if a.megapixels:
+        g["big"] = {"class_type": "ImageScaleToTotalPixels", "inputs": {
+            "image": ["ref0", 0], "upscale_method": "lanczos", "megapixels": a.megapixels, "resolution_steps": 16}}
+    else:
+        # original x factor, then rounded down to a multiple of 16 px (Klein's latent grid)
+        g["scaled"] = {"class_type": "ImageScaleBy", "inputs": {
+            "image": ["ref0", 0], "upscale_method": "lanczos", "scale_by": a.scale}}
+        g["big"] = {"class_type": "ResizeImageMaskNode", "inputs": {
+            "input": ["scaled", 0], "resize_type": "scale to multiple", "resize_type.multiple": 16,
+            "scale_method": "lanczos"}}
+    rml = {"positive": ["pos", 0], "negative": ["neg", 0], "vae": ["vae", 0],
+           "resolution": "resize", "resolution.megapixels": a.ref_mp}
+    rml.update({f"images.image{i}": [f"ref{i}", 0] for i in range(len(refs))})
+    g.update({
         "init": {"class_type": "VAEEncode", "inputs": {"pixels": ["big", 0], "vae": ["vae", 0]}},
         "pos": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["te", 0], "text": prompt}},
         "neg": {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["pos", 0]}},
-        "refs": {"class_type": "ReferenceMultiLatent", "inputs": {
-            "positive": ["pos", 0], "negative": ["neg", 0], "vae": ["vae", 0],
-            "resolution": "resize", "resolution.megapixels": a.ref_mp, "images.image0": ["img", 0]}},
+        "refs": {"class_type": "ReferenceMultiLatent", "inputs": rml},
         "sample": {"class_type": "KSampler", "inputs": {
             "model": ["unet", 0], "seed": a.seed, "steps": a.steps or 16, "cfg": 1.0, "sampler_name": "euler",
             "scheduler": "simple", "positive": ["refs", 0], "negative": ["refs", 1],
             "latent_image": ["init", 0], "denoise": a.denoise}},
         "dec": {"class_type": "VAEDecode", "inputs": {"samples": ["sample", 0], "vae": ["vae", 0]}},
         "save": {"class_type": "SaveImage", "inputs": {"images": ["dec", 0], "filename_prefix": "upscale/klein"}},
-    }
+    })
+    return g
 
 
 DEFAULT_UPSCALE_PROMPT = (
@@ -434,7 +452,8 @@ def main(argv=None):
     p.add_argument("model", choices=sorted(BUILDERS))
     p.add_argument("prompt", nargs="?", default="", help="optional for seedvr2 / klein-up / detail")
     p.add_argument("--ref", action="append", default=[],
-                   help="reference image; repeat for more (edit mode; for detail: identity references)")
+                   help="reference image; repeat for more (edit mode; detail: identity references; "
+                        "klein-up: the image to upscale, then extra references)")
     p.add_argument("--upsample", action="store_true", help="rewrite the prompt with the model's prompt enhancer first")
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--steps", type=int, default=None, help="default: klein 15 (t2i) / 16 (edit, detail), qwen 25")
@@ -444,12 +463,14 @@ def main(argv=None):
     p.add_argument("--ref-mp", type=float, default=1.0, help="klein: megapixels each reference is resized to")
     p.add_argument("--ref-res", type=int, default=1024, help="qwen: references are resized to about NxN (0 = full size)")
     p.add_argument("--qwen-int8", action="store_true", help="use the official INT8 Qwen model instead of the GGUF")
-    p.add_argument("--scale", type=float, default=2.0, help="seedvr2: upscale factor (2 or 4 are typical)")
+    p.add_argument("--scale", type=float, default=2.0,
+                   help="seedvr2 / klein-up: output = original size x this (klein-up rounds down to a multiple of 16 px)")
     p.add_argument("--seedvr2-model", choices=["3b", "7b"], default="3b",
                    help="seedvr2: model size (7b needs the installer's --seedvr2-7b)")
     p.add_argument("--color", choices=["lab", "wavelet", "adain", "none"], default="lab",
                    help="seedvr2: colour matching to the original (lab = most faithful)")
-    p.add_argument("--megapixels", type=float, default=4.0, help="klein-up: output size in megapixels (4 = 2x of 1 MP)")
+    p.add_argument("--megapixels", type=float, default=None,
+                   help="klein-up: output size in megapixels instead of --scale")
     p.add_argument("--denoise", type=float, default=None,
                    help="klein-up / detail: how much is repainted (klein-up default 0.35, detail default 0.4)")
     d = p.add_argument_group("detail (ADetailer-style region repaint with Klein; --ref = identity references)")
