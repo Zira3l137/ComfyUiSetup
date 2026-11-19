@@ -157,7 +157,7 @@
     "previewExposures": []
    },
    "widgets_values": [
-    0,
+    1024,
     "Remove the background, and output a PNG image",
     "",
     1,
@@ -175,7 +175,7 @@
     "int8"
    ],
    "widgets_values_named": {
-    "resolution": 0,
+    "resolution": 1024,
     "prompt": "Remove the background, and output a PNG image",
     "negative_prompt": "",
     "cfg": 1,

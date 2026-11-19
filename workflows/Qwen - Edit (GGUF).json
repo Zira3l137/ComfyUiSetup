@@ -183,7 +183,7 @@
     "previewExposures": []
    },
    "widgets_values": [
-    0,
+    1024,
     "Replace costumes for the character",
     false,
     false,
@@ -205,7 +205,7 @@
     "qwen3.5_9b_qwen_image_2.1_pe_i2i_w4a8.safetensors"
    ],
    "widgets_values_named": {
-    "resolution": 0,
+    "resolution": 1024,
     "prompt": "Replace costumes for the character",
     "switch_1": false,
     "thinking": false,
@@ -490,7 +490,7 @@
    "title": "Tailored for this setup",
    "properties": {},
    "widgets_values": [
-    "**Qwen-Image-2.1, edit** (GGUF Q4_K)\n\n- Up to 10 references on the subgraph's image_1..image_10 inputs; delete the second Load Image if you only need one.\n- `custom_size` off = output matches the first reference's size.\n- `resolution` = how big references are fed in (0 = native size, rounded). Lower it if you run out of memory.\n- KV cache is set to int8 to save memory.\n- Output: `output/qwen/`"
+    "**Qwen-Image-2.1, edit** (GGUF Q4_K)\n\n- Up to 10 references on the subgraph's image_1..image_10 inputs; delete the second Load Image if you only need one.\n- `custom_size` off = output matches the first reference's size.\n- `resolution` = how big references are fed in (set to 1024; 0 = full size, slower and heavier).\n- KV cache is set to int8 to save memory.\n- Output: `output/qwen/`"
    ],
    "color": "#432",
    "bgcolor": "#653"

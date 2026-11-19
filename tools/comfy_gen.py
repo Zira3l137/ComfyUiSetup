@@ -35,6 +35,11 @@ QWEN = {
     "pe_t2i": "qwen3.5_9b_qwen_image_2.1_pe_t2i_w4a8.safetensors",
     "pe_i2i": "qwen3.5_9b_qwen_image_2.1_pe_i2i_w4a8.safetensors",
 }
+SEEDVR2 = {
+    "3b": "seedvr2_3b_int8_convrot.safetensors",
+    "7b": "seedvr2_7b_int8_convrot.safetensors",
+    "vae": "seedvr2_ema_vae_fp16.safetensors",
+}
 # The installer writes config.json when a non-default GGUF quant was chosen.
 _cfg = HERE / "config.json"
 if _cfg.is_file():
@@ -164,7 +169,71 @@ def build_qwen(a, refs):
     return g
 
 
-BUILDERS = {"klein": build_klein, "qwen": build_qwen}
+def build_seedvr2(a, refs):
+    """Faithful upscale with SeedVR2: one diffusion step that restores detail at the new size.
+    Mirrors the official SeedVR2 template (tiled VAE, alpha kept, colour matched to the original)."""
+    if len(refs) != 1:
+        sys.exit("seedvr2 needs exactly one --ref image")
+    return {
+        "img": {"class_type": "LoadImage", "inputs": {"image": refs[0]}},
+        "rgba": {"class_type": "JoinImageWithAlpha", "inputs": {"image": ["img", 0], "alpha": ["img", 1]}},
+        "resize": {"class_type": "ResizeImageMaskNode", "inputs": {
+            "input": ["rgba", 0], "resize_type": "scale by multiplier",
+            "resize_type.multiplier": a.scale, "scale_method": "lanczos"}},
+        "pre": {"class_type": "SeedVR2Preprocess", "inputs": {"resized_images": ["resize", 0]}},
+        "unet": {"class_type": "UNETLoader", "inputs": {"unet_name": SEEDVR2[a.seedvr2_model], "weight_dtype": "default"}},
+        "vae": {"class_type": "VAELoader", "inputs": {"vae_name": SEEDVR2["vae"]}},
+        "enc": {"class_type": "VAEEncodeTiled", "inputs": {
+            "pixels": ["pre", 0], "vae": ["vae", 0], "tile_size": 512, "overlap": 128,
+            "temporal_size": 4096, "temporal_overlap": 8}},
+        "cond": {"class_type": "SeedVR2Conditioning", "inputs": {"model": ["unet", 0], "vae_conditioning": ["enc", 0]}},
+        "sample": {"class_type": "KSampler", "inputs": {
+            "model": ["unet", 0], "seed": a.seed, "steps": 1, "cfg": 1.0, "sampler_name": "euler",
+            "scheduler": "simple", "positive": ["cond", 0], "negative": ["cond", 1],
+            "latent_image": ["enc", 0], "denoise": 1.0}},
+        "dec": {"class_type": "VAEDecodeTiled", "inputs": {
+            "samples": ["sample", 0], "vae": ["vae", 0], "tile_size": 512, "overlap": 128,
+            "temporal_size": 4096, "temporal_overlap": 8}},
+        "post": {"class_type": "SeedVR2PostProcessing", "inputs": {
+            "images": ["dec", 0], "original_resized_images": ["resize", 0],
+            "color_correction_method": a.color}},
+        "save": {"class_type": "SaveImage", "inputs": {"images": ["post", 0], "filename_prefix": "upscale/seedvr2"}},
+    }
+
+
+def build_klein_upscale(a, refs):
+    """Creative upscale ("hires fix") with FLUX 3 Klein: enlarge, then repaint at partial
+    denoise while the original is also fed in as a reference, so identity and layout hold."""
+    if len(refs) != 1:
+        sys.exit("klein-up needs exactly one --ref image")
+    prompt = a.prompt or DEFAULT_UPSCALE_PROMPT
+    return {
+        "unet": {"class_type": "UNETLoader", "inputs": {"unet_name": KLEIN["unet"], "weight_dtype": "default"}},
+        "te": {"class_type": "CLIPLoader", "inputs": {"clip_name": KLEIN["te"], "type": "flux3", "device": "default"}},
+        "vae": {"class_type": "VAELoader", "inputs": {"vae_name": KLEIN["vae"]}},
+        "img": {"class_type": "LoadImage", "inputs": {"image": refs[0]}},
+        "big": {"class_type": "ImageScaleToTotalPixels", "inputs": {
+            "image": ["img", 0], "upscale_method": "lanczos", "megapixels": a.megapixels, "resolution_steps": 16}},
+        "init": {"class_type": "VAEEncode", "inputs": {"pixels": ["big", 0], "vae": ["vae", 0]}},
+        "pos": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["te", 0], "text": prompt}},
+        "neg": {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["pos", 0]}},
+        "refs": {"class_type": "ReferenceMultiLatent", "inputs": {
+            "positive": ["pos", 0], "negative": ["neg", 0], "vae": ["vae", 0],
+            "resolution": "resize", "resolution.megapixels": a.ref_mp, "images.image0": ["img", 0]}},
+        "sample": {"class_type": "KSampler", "inputs": {
+            "model": ["unet", 0], "seed": a.seed, "steps": a.steps or 16, "cfg": 1.0, "sampler_name": "euler",
+            "scheduler": "simple", "positive": ["refs", 0], "negative": ["refs", 1],
+            "latent_image": ["init", 0], "denoise": a.denoise}},
+        "dec": {"class_type": "VAEDecode", "inputs": {"samples": ["sample", 0], "vae": ["vae", 0]}},
+        "save": {"class_type": "SaveImage", "inputs": {"images": ["dec", 0], "filename_prefix": "upscale/klein"}},
+    }
+
+
+DEFAULT_UPSCALE_PROMPT = (
+    "A high-resolution version of <ref_image_0>: identical composition, subjects, colors and lighting, "
+    "with sharp focus and fine, natural detail in every texture.")
+
+BUILDERS = {"klein": build_klein, "qwen": build_qwen, "seedvr2": build_seedvr2, "klein-up": build_klein_upscale}
 
 
 # ── talking to the server ─────────────────────────────────────────────────────
@@ -219,7 +288,8 @@ def run(a):
         print_node_errors(json.loads(e.read() or b"{}"))
         sys.exit(1)
     pid = res["prompt_id"]
-    print(f"queued {a.model} {'edit' if refs else 't2i'}  seed={a.seed}  id={pid}", file=sys.stderr)
+    mode = "upscale" if a.model in ("seedvr2", "klein-up") else ("edit" if refs else "t2i")
+    print(f"queued {a.model} {mode}  seed={a.seed}  id={pid}", file=sys.stderr)
 
     t0 = time.time()
     while True:
@@ -256,7 +326,7 @@ def main(argv=None):
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8188)
     p.add_argument("model", choices=sorted(BUILDERS))
-    p.add_argument("prompt")
+    p.add_argument("prompt", nargs="?", default="", help="optional for seedvr2 / klein-up")
     p.add_argument("--ref", action="append", default=[], help="reference image; repeat for more (edit mode)")
     p.add_argument("--upsample", action="store_true", help="rewrite the prompt with the model's prompt enhancer first")
     p.add_argument("--seed", type=int, default=None)
@@ -265,13 +335,23 @@ def main(argv=None):
     p.add_argument("--height", type=int, default=None, help="default = width")
     p.add_argument("--negative", default="", help="qwen only")
     p.add_argument("--ref-mp", type=float, default=1.0, help="klein: megapixels each reference is resized to")
-    p.add_argument("--ref-res", type=int, default=0, help="qwen: reference resize (0 = native size)")
+    p.add_argument("--ref-res", type=int, default=1024, help="qwen: references are resized to about NxN (0 = full size)")
     p.add_argument("--qwen-int8", action="store_true", help="use the official INT8 Qwen model instead of the GGUF")
+    p.add_argument("--scale", type=float, default=2.0, help="seedvr2: upscale factor (2 or 4 are typical)")
+    p.add_argument("--seedvr2-model", choices=["3b", "7b"], default="3b",
+                   help="seedvr2: model size (7b needs the installer's --seedvr2-7b)")
+    p.add_argument("--color", choices=["lab", "wavelet", "adain", "none"], default="lab",
+                   help="seedvr2: colour matching to the original (lab = most faithful)")
+    p.add_argument("--megapixels", type=float, default=4.0, help="klein-up: output size in megapixels (4 = 2x of 1 MP)")
+    p.add_argument("--denoise", type=float, default=0.35,
+                   help="klein-up: how much is repainted (0.25 subtle, 0.35 default, 0.5 strong)")
     p.add_argument("--out", default=None, help="also copy results into this folder")
     p.add_argument("--print-graph", action="store_true", help="print the API prompt instead of queueing it")
     a = p.parse_args(argv)
     if a.seed is None:
         a.seed = random.randrange(2**48)
+    if not a.prompt and a.model in ("klein", "qwen"):
+        p.error("a prompt is required for klein and qwen")
     run(a)
 
 

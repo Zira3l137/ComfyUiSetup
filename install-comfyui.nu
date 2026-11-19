@@ -6,6 +6,7 @@
 #   • FLUX 3 Klein prompt upsampler (W4A8)  - the "ChatGPT-style" prompt rewriter
 #   • Qwen-Image-2.1 (GGUF Q4_K)            - transparent (RGBA) output, mask edits
 #   • Qwen-Image-2.1 prompt enhancers (W4A8, t2i + edit)
+#   • SeedVR2 3B (INT8)                     - faithful AI upscaling
 #
 # Target: Windows 11, RTX 3060 12 GB, 16 GB RAM, Nushell 0.114, uv, git.
 #
@@ -14,6 +15,7 @@
 #   nu install-comfyui.nu C:\AI\ComfyUI --no-qwen          # FLUX 3 Klein only
 #   nu install-comfyui.nu C:\AI\ComfyUI --no-upsampler     # skip the 6.7 GB Klein upsampler
 #   nu install-comfyui.nu C:\AI\ComfyUI --no-qwen-enhancer # skip the 2 x 6.7 GB Qwen enhancers
+#   nu install-comfyui.nu C:\AI\ComfyUI --seedvr2-7b       # also the 8.3 GB SeedVR2 7B upscaler
 #   nu install-comfyui.nu --help                            # list all options
 #
 # Re-running is safe: repos are fast-forwarded (git pull), downloaded model
@@ -29,6 +31,7 @@
 const KLEIN_REPO = "black-forest-labs/flux-3-image-klein-comfy"   # gated: accept license on HF first
 const QWEN_REPO  = "Comfy-Org/Qwen-Image-2.1"
 const QWEN_GGUF_REPO = "leejet/Qwen-Image-2.1-GGUF"
+const SEEDVR2_REPO = "Comfy-Org/SeedVR2"
 
 # The leejet fork of ComfyUI-GGUF: its loader lists the qwen_image21 architecture.
 # The original city96 node is reported to fail on these files with
@@ -80,6 +83,8 @@ def main [
     --no-upsampler                  # Skip the 6.7 GB FLUX 3 Klein prompt upsampler
     --no-qwen                       # Skip Qwen-Image-2.1 entirely
     --no-qwen-enhancer              # Skip the two 6.7 GB Qwen prompt enhancers
+    --no-seedvr2                    # Skip the SeedVR2 upscaler
+    --seedvr2-7b                    # Also fetch the bigger 8.3 GB SeedVR2 7B model
     --qwen-format: string = "gguf"  # "gguf" (bundled workflows use it) or "int8" (official file, no custom node)
     --qwen-quant: string = "Q4_K"   # GGUF quant from the leejet repo: Q2_K Q3_K Q4_0 Q4_K Q5_0 Q6_K Q8_0
 ] {
@@ -118,7 +123,8 @@ def main [
     let klein_gb = if $no_upsampler { 11.0 } else { 17.7 }
     let qwen_base_gb = if $qwen_format == "int8" { 14.3 } else { 11.2 }
     let qwen_gb = if $no_qwen { 0.0 } else if $no_qwen_enhancer { $qwen_base_gb } else { $qwen_base_gb + 13.4 }
-    let total_gb = $klein_gb + $qwen_gb + 6.0   # + about 6 GB for ComfyUI and the venv
+    let seedvr2_gb = if $no_seedvr2 { 0.0 } else if $seedvr2_7b { 12.3 } else { 4.0 }
+    let total_gb = $klein_gb + $qwen_gb + $seedvr2_gb + 6.0   # + about 6 GB for ComfyUI and the venv
     print $"  install dir : ($install_dir)"
     print $"  disk needed : about ($total_gb | math round --precision 1) GB, plus about 3 GB in the uv cache on drive C"
 
@@ -215,6 +221,16 @@ def main [
         }
     }
 
+    # ── 5b. SeedVR2 upscaler ─────────────────────────────────────────────────
+    if not $no_seedvr2 {
+        step "Downloading SeedVR2 (INT8)"
+        hf-get $SEEDVR2_REPO "diffusion_models/seedvr2_3b_int8_convrot.safetensors" $models  # 3.5 GB
+        hf-get $SEEDVR2_REPO "vae/seedvr2_ema_vae_fp16.safetensors" $models                   # 0.5 GB
+        if $seedvr2_7b {
+            hf-get $SEEDVR2_REPO "diffusion_models/seedvr2_7b_int8_convrot.safetensors" $models  # 8.3 GB
+        }
+    }
+
     # ── 6. helper scripts and the generator ──────────────────────────────────
     step "Copying helper scripts"
     for f in (ls ($pkg | path join "scripts") | get name) {
@@ -242,6 +258,7 @@ def main [
     for f in (ls ($pkg | path join "workflows") | where type == file | get name) {
         let name = ($f | path basename)
         if $no_qwen and ($name | str starts-with "Qwen") { continue }
+        if $no_seedvr2 and ($name | str contains "SeedVR2") { continue }
         let dest = ($wf_dest | path join $name)
         if $gguf_name == $DEFAULT_GGUF {
             cp $f $dest
@@ -263,5 +280,6 @@ def main [
     step "Done"
     print $"  Start:   nu '($install_dir | path join launch.nu)'"
     print "  Then:    Workflows sidebar > tailored, or from a terminal: nu gen.nu klein \"a red fox in snow\""
+    print "  Upscale: nu upscale.nu photo.png   (add --creative for the FLUX 3 Klein redraw)"
     print "  Also:    status.nu (models, memory), free.nu (unload models), update.nu (pull + deps)"
 }
